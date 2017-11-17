@@ -1,0 +1,40 @@
+Developer notes for extending KiT
+=================================
+
+Updated: December 2015.
+
+If you extend KiT, please consider submitting your code to the BitBucket
+repository http://bitbucket.org/jarmond/kit.
+
+Implementing new particle/spot detection and/or refinement algorithms
+---------------------------------------------------------------------
+
+The choice of detection algorithm is controlled by jobset.options.spotMode, and
+refinment algorithm by jobset.opitions.refineMode, each of which is a cell array
+of strings, one for each channel.
+
+New particle detection algorithms can be added to kitFindCoords.m under the
+switch spotMode construct. Refinement algorithms can be added under the switch
+refineMode construct. Please see the existing algorithms, e.g. 'histcut',
+'centroid' for usage,
+
+The detection algorithm is required to return a cell array with nFrames
+elements. Each element is a nx3 matrix of n particles.
+
+The refinement algorithm is takes a job struct and returns a job struct with the
+refined particle locations. The job struct contains a cell array field
+'dataStruct', one element for each channel. For the current channel the
+refinement algorithm must return the job struct with the
+dataStruct{channe}.initCoord struct added. The initCoord struct consists of the following fields:
+  .localMaxima : the original detected particle locations.
+  .allCoord: the refined particle locations in um.
+  .allCoordPix: the above in pixel coordinates.
+  .amp: the amplitude (e.g., signal intensity) of the particles.
+The struct has one element per frame. See kitCentroid.m as an example.
+
+
+If a new algorithm requires options, these can be added to
+kitDefaultOptions.m. This will cause them to be added to the jobset.options
+struct whenever kitRunJobs or kitGUI is called. To enable display in the GUI,
+appropriate strings should be added to the cell array maps at the start of
+kitGUI.m

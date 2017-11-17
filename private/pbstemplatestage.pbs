@@ -1,0 +1,41 @@
+#!/bin/bash
+#PBS -l walltime=2:00:00
+#PBS -l mem=2gb,ncpus=1
+#PBS -V
+#PBS -e localhost:$HOME/$PBS_JOBNAME.err
+#PBS -o localhost:$HOME/$PBS_JOBNAME.out
+##PBS -W stagein="$MOVIE_FILE@$MOVIE_DIR/$MOVIE_FILE"
+##PBS -W stageout="$TRACK_FILE@$MOVIE_DIR/$TRACK_FILE"
+
+hostname
+# Random delay to avoid overloading resources.
+sleep $[ ( $RANDOM % 10 )  + 1 ]s
+
+# PBS template for KiT. Edit to suit your configuration.
+
+# Escape spaces
+MOVIE_INFILE="$(printf %q "$MOVIE_DIR/$MOVIE_FILE")"
+MOVIE_FILE="$(printf %q "$MOVIE_FILE")"
+TRACK_FILE="$(printf %q "$TRACK_FILE")"
+TRACK_OUTFILE="$(printf %q "$MOVIE_DIR/$TRACK_FILE")"
+
+# Stagein movie. NB can't use variables in PBS -W stagein directive, so do it manually.
+if [ ! -f "$MOVIE_FILE" ]; then
+    echo "Copying: $MOVIE_INFILE to $MOVIE_FILE"
+    scp "$MOVIE_INFILE" "$MOVIE_FILE"
+else
+    echo "Not copying, already exists: $MOVIE_INFILE"
+fi
+
+cd $HOME/kit
+matlab -nodesktop -nosplash -singleCompThread -r "js=kitLoadJobset('../$JOBSET_FILE');js.movieDirectory='..';kitRunJobs(js,'subset',$JOB_ID);"
+cd ..
+
+# Stageout tracking file.
+echo "Copying: $TRACK_FILE to $TRACK_OUTFILE"
+scp "$TRACK_FILE" "$TRACK_OUTFILE"
+
+# Cleanup
+echo "Cleaning up"
+rm -v $TRACK_FILE
+
