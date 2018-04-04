@@ -1,10 +1,10 @@
 function [spots,spotsPix,img]=kitFrameSpots(filename,channel)
 
 job = kitDefaultOptions();
-job.movie = filename;
+job.ROI.movie = filename;
 [crop, cropSize] = kitCropMovie(job.movie);
-job.crop = crop;
-job.cropSize = cropSize;
+job.ROI.crop = crop;
+job.ROI.cropSize = cropSize;
 
 [job.metadata,reader] = kitOpenMovie(filename);
 
@@ -30,4 +30,4 @@ job = kitMixtureModel(job,reader,channel);
 spots = job.dataStruct{channel}.initCoord(1).allCoord(:,1:3);
 spotsPix = job.dataStruct{channel}.initCoord(1).allCoordPix(:,1:3);
 
-img = kitReadImageStack(reader,job.metadata,1,channel,job.crop,1);
+img = kitReadImageStack(reader,job.metadata,1,channel,job.ROI.crop,1);

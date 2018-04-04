@@ -14,6 +14,9 @@ if nargin<2
   zPlane=[];
 end
 
+% Suppress warnings.
+warning('off','all');
+
 try
   [f,rgbImg,zPlanes] = kitMovieProj(movieFileName,zPlane,[],1);
 catch me
@@ -45,13 +48,13 @@ crop = round(crop);
 sz = size(rgbImg);
 if isempty(crop)
   % If no ROI selected use whole image.
-  crop = [1 1 sz(1:2)];
+  crop = [1 1 sz([2 1])];
 end
 
 for i=1:size(crop,1)
   cropImg = imcrop(rgbImg,crop(i,:));
   sz = size(cropImg);
-  cropSize(i,:) = [sz(1:2) zPlanes];
+  cropSize(i,:) = [sz([2 1]) zPlanes];
 end
 
 function addROI_cb(hObj,eventdata,handles)
@@ -64,5 +67,8 @@ function addROI_cb(hObj,eventdata,handles)
   set(finBtn,'Enable','on');
   uiresume(f);
 end
+
+% Reactivate warnings.
+warning('on','all');
 
 end

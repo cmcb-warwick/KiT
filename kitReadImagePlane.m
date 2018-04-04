@@ -1,4 +1,4 @@
-function plane=kitReadImagePlane(imageReader,metadata,z,c,t,crop,normalize)
+function plane=kitReadImagePlane(imageReader,metadata,t,c,z,crop,normalize)
 % KITREADIMAGEPLANE Read a single image plane from a movie file.
 %
 %    PLANE = KITREADIMAGEPLANE(IMAGEREADER,METADATA,T,C,Z,CROP,NORMALIZE) Read a

@@ -25,6 +25,9 @@ opts = job.options;
 % Extract track coordinates.
 for j=1:nTracks
     track = tracks(j);
+    if isempty(track.seqOfEvents)
+        continue
+    end
     featIndx = track.tracksFeatIndxCG;
     startTime = track.seqOfEvents(1,1);
     endTime = track.seqOfEvents(2,1);
@@ -38,8 +41,7 @@ for j=1:nTracks
     end
 
     % Assign P or AP directions.
-    trackList(j).direction = kitAssignDirection(trackList(j).coords(:,1),...
-                                                'exp',job.options.dirAssignExpWeight);
+    trackList(j).direction = kitAssignDirection(trackList(j).coords(:,1),opts.direction);
 
     % Set sister to empty in case no sisters.
     trackList(j).sister = [];

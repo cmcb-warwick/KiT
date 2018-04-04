@@ -87,7 +87,8 @@ rankNNearestNeighbors = 10;
 
 % minimal number of consecutive frames in a movie that have stable enough
 % eigenvectors for plane rotation estimation
-minConsecFrames = 5;
+nTimePoints = job.metadata.nFrames;
+minConsecFrames = min(5,nTimePoints-1);
 
 % minimum number of spots to attempt to fit plane to
 minSpotsInFrame = 3;
@@ -110,7 +111,6 @@ else
 end
 
 % Get coordinates.
-nTimePoints = job.metadata.nFrames;
 if isfield(dataStruct,'initCoord')
   initCoord = dataStruct.initCoord;
   spotsFound = 1;
@@ -121,7 +121,6 @@ else
     'correctionMu',0,'nSpots',0,'initAmp',[],'amp',[]);
   spotsFound = 0;
 end
-nSpots = cat(1,initCoord.nSpots);
 
 %assign dimensionality for fit
 probDim = 3 - use2D;
@@ -150,7 +149,7 @@ end
 
 % loop through timepoints. Get covariance of point cloud, and the
 % corresponding eigenvalues. Label frames that have sufficient anisotropy.
-
+nSpots = zeros(nTimePoints,1);
 eigenValues = zeros(nTimePoints,probDim);
 eigenVectors = zeros(probDim,probDim,nTimePoints);  %vectors in cols
 meanCoord = zeros(nTimePoints,probDim);
@@ -159,6 +158,9 @@ meanCoordFull = zeros(nTimePoints,3);
 goodFrames1 = [];
 potFrames = [];
 for t=1:nTimePoints
+  
+  % Get number of spots.
+  nSpots(t) = size(initCoord(t).allCoord,1);  
   % Make an initial outlier detection.
   if spotsFound && nSpots(t) < minSpotsInFrame
     % No spots. Set origin to 0.
@@ -188,7 +190,7 @@ for t=1:nTimePoints
     % Get data for eigenRatio, subsequent plane fitting.
     if useImageCov
       img = kitReadImageStack(reader,job.metadata,t,...
-                              opts.coordSystemChannel,job.crop);
+                              opts.coordSystemChannel,job.ROI.crop);
 
       % Keep only values above chosen percentile. This eliminates the
       % background intensity and leaves mostly the spots.
@@ -202,9 +204,9 @@ for t=1:nTimePoints
           eigenCalcFromImg(img);
 
       % Calculate centroid from blend of all channels to increase stability.
-      img = zeros(job.cropSize);
+      img = zeros(job.ROI.cropSize);
       for i=1:job.metadata.nChannels
-        img = imadd(img, kitReadImageStack(reader,job.metadata,t,i,job.crop));
+        img = imadd(img, kitReadImageStack(reader,job.metadata,t,i,job.ROI.crop));
       end
       img = img / job.metadata.nChannels;
 
@@ -722,7 +724,7 @@ for iTime = 1 : nTimePoints
   tmpCoord(iTime).allCoord = initCoord(iTime).allCoord;
   if nSpots(iTime)>0
     tmpCoord(iTime).allCoord(:,1:3) = tmpCoord(iTime).allCoord(:,1:3) - ...
-        repmat(frameOrigin(iTime,:),nSpots(iTime),1);
+        repmat(frameOrigin(iTime,:),size(tmpCoord(iTime).allCoord(:,1:3),1),1);
   end
 end
 
@@ -795,7 +797,7 @@ end % function kitFitPlane
 function showPlaneFit(job,reader,channel,frameNum,origin,eVecs,allCoordPix)
 % Show debugging visualization.
 
-img = kitReadImageStack(reader, job.metadata, frameNum, channel, job.crop);
+img = kitReadImageStack(reader, job.metadata, frameNum, channel, job.ROI.crop);
 % Max project image.
 img = max(img,[],3);
 

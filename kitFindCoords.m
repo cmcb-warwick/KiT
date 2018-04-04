@@ -12,7 +12,9 @@ function job=kitFindCoords(job, reader, channel)
 %
 % OUTPUT job: as input but with updated values.
 %
-% Copyright (c) 2012 Jonathan W. Armond
+% Created by: J. W. Armond
+% Modified by: C. A. Smith
+% Copyright (c) 2016 C. A. Smith
 
 % Method of fixing spot locations: centroid or Gaussian MMF, or none.
 method = job.options.coordMode{channel};
@@ -34,7 +36,7 @@ ndims = 2 + is3D;
 filters = createFilters(ndims,job.dataStruct{channel}.dataProperties);
 
 % Read image
-movie = kitReadWholeMovie(reader,job.metadata,channel,job.crop,0,1);
+movie = kitReadWholeMovie(reader,job.metadata,channel,job.ROI.crop,0,1);
 [imageSizeX,imageSizeY,imageSizeZ,~] = size(movie);
 if options.deconvolve
   kitLog('Deconvolving');
@@ -75,10 +77,15 @@ switch spotMode
       spots{i} = waveletSpots(img,options);
     end
     
+  case 'neighbour'
+    kitLog('Detecting particle candidates using neighbouring channel');
+    refDataStruct = job.dataStruct{options.coordSystemChannel};
+    [spots,spotIDs] = neighbourSpots(movie,refDataStruct,channel,job.metadata,options);
+    
   case 'manual'
     kitLog('Detecting particle candidates using manual detection');
     spots = manualDetection(movie,job.metadata,options);
-
+    
   otherwise
     error('Unknown particle detector: %s',spotMode);
 end
@@ -88,7 +95,9 @@ for i=1:nFrames
   nSpots(i) = size(spots{i},1);
 
   % Round spots to nearest pixel and limit to image bounds.
-  spots{i} = bsxfun(@min,bsxfun(@max,round(spots{i}),1),[imageSizeX,imageSizeY,imageSizeZ]);
+  if nSpots(i) > 1
+    spots{i} = bsxfun(@min,bsxfun(@max,round(spots{i}),1),[imageSizeX,imageSizeY,imageSizeZ]);
+  end
 
   % Store the cands of the current image
   % TODO this is computed in both spot detectors, just return it.
@@ -99,7 +108,14 @@ for i=1:nFrames
     background = imgaussfilt3(img,filters.backgroundP(1:3),'FilterSize',filters.backgroundP(4:6));
   end
   localMaxima(i).cands = spots{i};
-  spots1D = sub2ind(size(img),spots{i}(:,1),spots{i}(:,2),spots{i}(:,3));
+  if strcmp(spotMode,'neighbour')
+      localMaxima(i).spotID = spotIDs{i};
+  end
+  if nSpots(i) > 1
+    spots1D = sub2ind(size(img),spots{i}(:,1),spots{i}(:,2),spots{i}(:,3));
+  else
+    spots1D = [];
+  end
   localMaxima(i).candsAmp = img(spots1D);
   localMaxima(i).candsBg = background(spots1D);
 

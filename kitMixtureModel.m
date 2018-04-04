@@ -2,8 +2,8 @@ function job = kitMixtureModel(job,movie,localMaxima,channel)
 % Refine spots in 3D using Gaussian mixture model fits
 %
 % Created by: Jacques Boisvert and K. Jaqaman
-% Modified by: J. W. Armond
-% Copyright (c) 2014 Jonathan W. Armond
+% Modified by: J. W. Armond and C. A. Smith
+% Copyright (c) 2016 C. A. Smith
 
 %% Input + initialization
 
@@ -11,10 +11,12 @@ dataStruct = job.dataStruct{channel};
 options = job.options;
 dataStruct.failed = 0;
 
+% get pixel and chromatic shift information
 pixelSize = job.metadata.pixelSize;
+chrShift = job.options.chrShift.result{options.coordSystemChannel,channel};
 % calculate alphaA based on pixel size
 % (standards: 0.05 at 138.1nm; 0.5 at 69.4nm)
-options.alphaA = options.alphaA.*(options.alphaA + (0.1381-pixelSize(1))*8)/0.05;
+options.mmf.alphaA = options.mmf.alphaA.*(options.mmf.alphaA + (0.1381-pixelSize(1))*8)/0.05;
 % NOTE TO SELF: Use scaling factor = 6.5 for 0.5, or 8 for 0.6
 
 % get number of frames
@@ -26,18 +28,28 @@ filterPrm = dataStruct.dataProperties.FILTERPRM;
 %initialize some variables
 emptyFrames = [];
 
-[imageSizeX,imageSizeY,imageSizeZ,~] = size(movie);
-
+% get neighbour information
+neighbour = strcmp(options.spotMode{channel},'neighbour');
+if neighbour
+  if isempty(options.neighbourSpots.timePoints{channel})
+    frames = 1:nFrames;
+  else
+    frames = options.neighbourSpots.timePoints{channel};
+  end
+else
+  frames = 1:nFrames;
+end
 % Go over all frames and register empty frames.
-for iImage = 1 : nFrames
+for iImage = frames
   %if there are no cands, register that this is an empty frame
   if isempty(localMaxima(iImage).cands)
-    emptyFrames = [emptyFrames; iImage]; %#ok<AGROW>
+    emptyFrames = [emptyFrames iImage]; %#ok<AGROW>
   end
 end
 
-%make a list of images that have local maxima
-goodImages = setxor(1:nFrames,emptyFrames,'legacy');
+%make a list of images that have local maxima, ensuring it is a row
+goodImages = setxor(frames,emptyFrames);
+goodImages = goodImages(:)';
 
 % get psf sigma from filterPrm
 if is3D
@@ -47,35 +59,60 @@ else
 end
 
 %initialize initCoord
-initCoord(1:nFrames) = struct('allCoord',[],'allCoordPix',[],'nSpots',0,'amp',[],'bg',[]);
+initCoord(frames) = struct('allCoord',[],'allCoordPix',[],'nSpots',0,'amp',[],'bg',[]);
 
 kitLog('Refining particles using mixture-model fitting');
 prog = kitProgress(0);
-%go over all non-empty images ...
+
+%if neighbour, firstly go over all empty images to give nan structures
+if neighbour
+  for iImage = emptyFrames
+    % Get number of spots in coordinate system channel
+    nSpotsOrig = job.dataStruct{options.coordSystemChannel}.initCoord(iImage).nSpots;
+    % Create an array of nans and insert neighbour coordinates per ID
+    initCoord(iImage).allCoord = nan(nSpotsOrig,2*ndims);
+    initCoord(iImage).allCoordPix = nan(nSpotsOrig,2*ndims);
+    initCoord(iImage).amp = nan(nSpotsOrig,3);
+    initCoord(iImage).bg = nan(nSpotsOrig,2);
+  end
+end
+
+% Go over all non-empty images ...
 for iImage = goodImages
   % Get frame.
   imageRaw = movie(:,:,:,iImage);
-
-  % Get candidate maxima.
+  if neighbour
+    % Get number of spots in coordinate system channel
+    nSpotsOrig = job.dataStruct{options.coordSystemChannel}.initCoord(iImage).nSpots;
+  end
+  % Get candidate maxima, and append spotIDs to the end
   cands = localMaxima(iImage).cands;
-  
-  % Impose opts with channel-specific mmfAddSpots and alphas.
-  opts = options;
-  opts.alphaA = opts.alphaA(channel);
-  opts.alphaD = opts.alphaD(channel);
-  opts.alphaF = opts.alphaF(channel);
+  if neighbour
+    cands(:,end+1) = localMaxima(iImage).spotID;
+  else
+    cands(:,end+1) = NaN;
+  end
 
   % Fit with mixture-models.
   startTime = clock;
-  [coordList,ampList,bgList,rejects] = mixtureModelFit(cands,imageRaw,psfSigma,opts);
+  
+  % Impose opts with channel-specific mmfAddSpots and alphas.
+  opts = options;
+  opts.mmf.addSpots = opts.mmf.addSpots*~strcmp(options.spotMode{channel},'neighbour');
+  opts.mmf.alphaA = opts.mmf.alphaA(channel);
+  opts.mmf.alphaD = opts.mmf.alphaD(channel);
+  opts.mmf.alphaF = opts.mmf.alphaF(channel);
+  % Run mixture model fitting.
+  [coordList,spotID,ampList,bgList,rejects] = mixtureModelFit(cands,imageRaw,psfSigma,opts);
+  
   elapsedTime = etime(clock,startTime);
-  if options.maxMmfTime > 0 && elapsedTime > options.maxMmfTime
+  if options.mmf.maxMmfTime > 0 && elapsedTime > options.mmf.maxMmfTime
     warning('Mixture-model fitting taking excessive time (%g min per frame). Aborting.',elapsedTime/60);
     dataStruct.failed = 1;
     break;
   end
   nSpots = size(coordList,1);
-  if ~isempty(coordList) && ~is3D
+  if ~is3D
     coordList = [coordList(:,1:2) zeros(nSpots,1) coordList(:,3:4) zeros(nSpots,1)];
   end
 
@@ -130,21 +167,38 @@ for iImage = goodImages
         keyboard;
     end
   end
-
+  
   %save results
   initCoord(iImage).nSpots = nSpots;
-  initCoord(iImage).allCoordPix = coordList;
-  initCoord(iImage).amp = ampList;
-  initCoord(iImage).bg = bgList;
-
-
-  %check whether frame is empty
-  if initCoord(iImage).nSpots == 0
-    emptyFrames = [emptyFrames; iImage]; %#ok<AGROW>
-    initCoord(iImage).allCoord = initCoord(iImage).allCoordPix;
+  if neighbour
+    % Create an array of nans and insert neighbour coordinates per ID
+    initCoord(iImage).allCoord = nan(nSpotsOrig,2*ndims);
+    initCoord(iImage).allCoordPix = nan(nSpotsOrig,2*ndims);
+    initCoord(iImage).amp = nan(nSpotsOrig,3);
+    initCoord(iImage).bg = nan(nSpotsOrig,2);
+    for iSpot = 1:nSpots
+      initCoord(iImage).allCoord(spotID(iSpot),:) = (coordList(iSpot,:).*repmat(pixelSize,1,2)) - [chrShift(1:ndims) 0 0 0];
+      initCoord(iImage).allCoordPix(spotID(iSpot),:) = coordList(iSpot,:);
+      initCoord(iImage).amp(spotID(iSpot),:) = ampList(iSpot,:);
+      initCoord(iImage).bg(spotID(iSpot),:) = bgList(iSpot,:);
+    end
+  
   else
-    % calc real space coordinates
-    initCoord(iImage).allCoord = initCoord(iImage).allCoordPix .* repmat(job.metadata.pixelSize,initCoord(iImage).nSpots,2);
+      
+    initCoord(iImage).allCoordPix = coordList;
+    initCoord(iImage).amp = ampList;
+    initCoord(iImage).bg = bgList;
+
+    %check whether frame is empty
+    if initCoord(iImage).nSpots == 0
+      emptyFrames = [emptyFrames iImage]; %#ok<AGROW>
+      initCoord(iImage).allCoord = initCoord(iImage).allCoordPix;
+    else
+      % calc real space coordinates and correct for chromatic shift
+      initCoord(iImage).allCoord = initCoord(iImage).allCoordPix .* repmat(pixelSize,initCoord(iImage).nSpots,2);
+      initCoord(iImage).allCoord(:,1:ndims) = initCoord(iImage).allCoord(:,1:ndims) - repmat(chrShift(1:ndims),initCoord(iImage).nSpots,1);
+    end
+  
   end
 
   %display progress

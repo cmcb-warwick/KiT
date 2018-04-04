@@ -3,7 +3,9 @@ function spots=histcutSpots(img,options,dataProperties,verbose)
 %
 % Based on code from MaKi, by (mostly) K. Jaqaman and J. Dorn.
 %
-% Copyright (c) 2015 Jonathan W. Armond
+% Created by: J. W. Armond
+% Modified by: C. A. Smith
+% Copyright (c) 2016 C. A. Smith
 
 if nargin<4
   verbose = 0;
@@ -81,15 +83,31 @@ if verbose
 end
 
 % Check if sufficient spots found in descending order of cutoff strictness.
-nn(3,:) = sum(poisson>cutoff(3))./[options.minSpotsPerFrame options.maxSpotsPerFrame];
-nn(2,:) = sum(dark>cutoff(2))./[options.minSpotsPerFrame options.maxSpotsPerFrame];
-nn(1,:) = sum(amp>cutoff(1))./[options.minSpotsPerFrame options.maxSpotsPerFrame];
-if nn(3,1) > 1 && nn(3,2) < 1
-  passIdx = poisson>cutoff(3);
-elseif nn(2,1) > 1 && nn(2,2) < 1
-  passIdx = dark>cutoff(2);
+nn(1,:) = sum(amp>cutoff(1));
+nn(2,:) = sum(dark>cutoff(2));
+nn(3,:) = sum(poisson>cutoff(3));
+nn = (nn - options.minSpotsPerFrame)/options.maxSpotsPerFrame;
+% If number of spots does not fall within range, take the closest.
+if all(nn > 1)
+  idx = find(min(nn));
+elseif all(nn < 0)
+  idx = find(max(nn));
 else
-  passIdx = amp>cutoff(1);
+% Otherwise, use the method within the range with the highest number.
+  idx = find(nn == max(nn(nn<=1)));
+end
+% If multiple methods provide the same number, use 'poisson' over 'dark'
+% over 'amp'.
+if length(idx)>1
+  idx = idx(end);
+end
+switch idx
+  case 1
+    passIdx = (amp > cutoff(1));
+  case 2
+    passIdx = (dark > cutoff(2));
+  case 3
+    passIdx = (poisson > cutoff(3));
 end
 
 % keep these spots

@@ -16,7 +16,7 @@ end
 
 % Open movie.
 if isstruct(job)
-    movieFile = job.movie;
+    movieFile = job.ROI.movie;
 elseif ischar(job)
     movieFile = job;
 else

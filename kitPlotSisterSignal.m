@@ -33,7 +33,7 @@ ds = job.dataStruct{opts.channel};
 sisterList = ds.sisterList;
 trackPairs = sisterList(1).trackPairs;
 trackList = ds.trackList;
-trackInt = ds.trackInt;
+spotInt = ds.spotInt;
 t = job.metadata.frameTime(1,:)';
 
 if opts.minLength > 0
@@ -48,7 +48,6 @@ sisterList = sisterList(opts.sel);
 trackPairs = trackPairs(opts.sel,:);
 nSisters = length(sisterList);
 
-
 figure;
 n=nSisters;
 fig_n=ceil(sqrt(n));
@@ -57,10 +56,12 @@ clf;
 for i=1:nSisters
   subplot(fig_m,fig_n,i);
   pair = trackPairs(i,1:2);
-
+  ints = cat(3,spotInt.intensity);
+  ints = squeeze(ints(:,sigchannel,:));
+  
   % Plot sister tracks.
   plotyy([t t],[sisterList(i).coords1(:,1) sisterList(i).coords2(:,1)],...
-         [t t],[trackInt(pair(1)).intensity(:,sigchannel) trackInt(pair(2)).intensity(:,sigchannel)])
+         [t t],[ints(pair(1),:)' ints(pair(2),:)'])
   if opts.directionality
     % Plot directionality.
     hold on;

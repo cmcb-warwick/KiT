@@ -31,11 +31,6 @@ stackSize = kitComputeStackSize(crop,metadata.frameSize);
 
 stack = zeros(stackSize, dataType);
 for z = 1:metadata.frameSize(3)
-  switch metadata.dimOrder
-    case 'xyzct' % ultraView spinning disk confocal
-      stack(:,:,z) = kitReadImagePlane(imageReader, metadata, z, c, t, crop, normalize);
-    case 'xyczt' % Janelia lattice light sheet
-      stack(:,:,z) = kitReadImagePlane(imageReader, metadata, t, c, z, crop, normalize);
-  end
+  stack(:,:,z) = kitReadImagePlane(imageReader, metadata, t, c, z, crop, normalize);
 end
 

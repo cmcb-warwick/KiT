@@ -8,12 +8,12 @@ function [spots,spotsAmp,ld]=waveletSpots(img,opts)
 % Copyright (c) 2015 Jonathan W. Armond
 
 verbose = opts.debug.showWavelet;
-tk = opts.waveletLevelThresh; % threshold scale for local MAD thresholding
-levels = opts.waveletNumLevels;  % number of wavelet levels
-localmad = opts.waveletLocalMAD; % locally estimated MAD
-backsub = opts.waveletBackSub;  % background subtraction
-prefilter = opts.waveletPrefilter; % denoise prefilter
-minProdL = opts.waveletMinLevel; % Discard wavelet levels below this.
+tk = opts.wavelet.levelThresh; % threshold scale for local MAD thresholding
+levels = opts.wavelet.numLevels;  % number of wavelet levels
+localmad = opts.wavelet.localMAD; % locally estimated MAD
+backsub = opts.wavelet.backSub;  % background subtraction
+prefilter = opts.wavelet.prefilter; % denoise prefilter
+minProdL = opts.wavelet.minLevel; % Discard wavelet levels below this.
 
 % 3D image.
 [sx,sy,sz] = size(img);

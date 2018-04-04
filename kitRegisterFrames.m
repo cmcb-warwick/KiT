@@ -18,10 +18,10 @@ optimizer.MinimumStepLength = 5e-4;
 % Read frame by frame.
 maxMergeChannels = 3;
 for t=1:md.nFrames
-    cImg = ones(job.cropSize([2 1]));
+    cImg = ones(job.ROI.cropSize([2 1]));
     for c=1:min(md.nChannels, maxMergeChannels)
         % Read stack.
-        img = kitReadImageStack(reader, md, t, c, job.crop, 0);
+        img = kitReadImageStack(reader, md, t, c, job.ROI.crop, 0);
         % Max project.
         img = max(img, [], 3);
         % Flip image.
