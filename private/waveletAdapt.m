@@ -58,7 +58,7 @@ end
 function y = objective(t)
   f = [1  floor(nFrames/2) nFrames-1];
   frameDiff = zeros(length(f),1);
-  options.waveletLevelThresh = t;
+  options.wavelet.levelThresh = t;
   for k=1:length(f)
     A = waveletSpots(movie(:,:,:,f(k)),options);
     B = waveletSpots(movie(:,:,:,f(k)+1),options);

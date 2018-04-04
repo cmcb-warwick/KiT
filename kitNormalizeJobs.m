@@ -42,7 +42,7 @@ for i=1:n
 
         % Per cell data
         allJobs.dataStruct{c}.cellInt(cellCtr) = job.dataStruct{c}.cellInt;
-        allJobs.dataStruct{c}.movie{cellCtr} = job.movie;
+        allJobs.dataStruct{c}.movie{cellCtr} = job.ROI.movie;
 
         % Augment track pair indices.
         if ~isempty(job.dataStruct{c}.sisterList(1).trackPairs)

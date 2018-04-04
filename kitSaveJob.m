@@ -7,7 +7,7 @@ function job = kitSaveJob(job)
 % Copyright (c) 2013 Jonathan W. Armond
 
 % Certain modes prohibit saving of output.
-if (isfield(job.options,'disableSave') && job.options.disableSave) || ...
+if (isfield(job.options.debug,'disableSave') && job.options.debug.disableSave) || ...
     (isfield(job,'disableSave') && job.disableSave)
   return;
 end

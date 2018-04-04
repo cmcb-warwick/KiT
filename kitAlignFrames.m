@@ -225,27 +225,28 @@ for iFrame = 1 : numFrames
     %get feature coordinates in this frame
     coordTmp = dataStruct.initCoord(iFrame).allCoord;
     numFeatures = size(coordTmp,1);
+    
+    if numFeatures > 0
+      
+      %subtract center of mass from coordinates
+      coordTmp(:,1:3) =  coordTmp(:,1:3) - repmat(centerOfMass(iFrame,:),numFeatures,1);
 
-    %subtract center of mass from coordinates
-    coordTmp(:,1:3) =  coordTmp(:,1:3) - repmat(centerOfMass(iFrame,:),numFeatures,1);
+      %get rotation matrix
+      rotationMat = inv(coordSystem(:,:,iFrame));
 
-    %get rotation matrix
-    rotationMat = inv(coordSystem(:,:,iFrame));
+      %calculate matrix to propagate error from original to rotated
+      %coordinates
+      errorPropMat = rotationMat.^2;
 
-    %calculate matrix to propagate error from original to rotated
-    %coordinates
-    errorPropMat = rotationMat.^2;
+      %calculate coordinates in rotated coordinate system
+      alignedCoord(iFrame).values(:,1:3) = (rotationMat * coordTmp(:,1:3)')';
 
-    %calculate coordinates in rotated coordinate system
-    alignedCoord(iFrame).values(:,1:3) = (rotationMat * coordTmp(:,1:3)')';
-
-    %propagate error
-    alignedCoord(iFrame).values(:,4:6) = sqrt((errorPropMat*((coordTmp(:,4:6)).^2)')');
+      %propagate error
+      alignedCoord(iFrame).values(:,4:6) = sqrt((errorPropMat*((coordTmp(:,4:6)).^2)')');
+      
+    end
 
 end
-
-
-
 
 %% output to dataStruct
 

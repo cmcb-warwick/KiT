@@ -14,12 +14,9 @@ end
 % Alias analysis.
 an = analysis;
 
-% Position of sister tracks.
-pos1 = []; pos2 = [];
-for iSis = 1:an.nSisters
-    pos1 = [pos1; an.sisterCoords1( : , 3*(iSis-1)+1:3*(iSis-1)+3 )];
-    pos2 = [pos2; an.sisterCoords2( : , 3*(iSis-1)+1:3*(iSis-1)+3 )];
-end
+% Mean position of sister tracks.
+pos1 = reshape(nanmean(an.sisterCoords1,1),3,an.nSisters)';
+pos2 = reshape(nanmean(an.sisterCoords2,1),3,an.nSisters)';
 
 % Compute distance between sisters.
 distances.sisters.sister.d = eudist(pos1,pos2);

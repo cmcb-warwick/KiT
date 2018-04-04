@@ -22,7 +22,7 @@ end
 if progress
   h = waitbar(0,'Opening movie');
 end
-[metadata,reader] = kitOpenMovie(movieFileName,'ROI');
+[metadata,reader] = kitOpenMovie(movieFileName);
 
 % Load subset of frames and overlay.
 nImages = 10;
@@ -45,7 +45,7 @@ for c=1:min([maxMergeChannels, metadata.nChannels])
   maxProj = zeros(metadata.frameSize(1:2));
   for f=1:length(frameList)
     if progress
-      waitbar(f/length(frameList),h);
+      waitbar(f/length(frameList),h);;
     end
     % Read stack.
     if isempty(zPlane)

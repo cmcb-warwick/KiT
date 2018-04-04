@@ -5,10 +5,18 @@ function analysis=cuplLoadData(analysis,jobset,channel)
 %
 % Copyright (c) 2013 Jonathan Armond
 
+if ~iscell(jobset)
+  jobset = {jobset};
+end
+
+nROIs = 0;
+for i=1:length(jobset)
+  nROIs = nROIs + length(jobset{i}.ROI);
+end
+
 % Allocate and initialise storage.
 an = analysis;
 an.version = kitVersion();
-nROIs = length(jobset.ROI);
 sisterCount = zeros(nROIs,1); % Nx1 (N: # of cells)
 trackCount = zeros(nROIs,1); % Nx1 (N: # of cells)
 an.sisterCellIdx = []; % 1xN (N: # of sisters)
@@ -21,103 +29,107 @@ an.hasTracks = 0;
 an.hasTrackInt = 0;
 
 % Load cell data.
-for i=1:nROIs
-  try
-    job = kitLoadJob(jobset, i);
-  catch me
-    if strcmp(me.identifier,'MATLAB:load:couldNotReadFile')
-      warning('File missing for job %d.',i)
+jobctr = 1;
+for jsidx=1:length(jobset)
+  for i=1:length(jobset{jsidx}.ROI)
+    try
+      job = kitLoadJob(jobset{jsidx}, i);
+    catch me
+      if strcmp(me.identifier,'MATLAB:load:couldNotReadFile')
+        warning('File missing for job %d.',i)
+      end
     end
-  end
-  empty = 0;
-  if ~isfield(job,'dataStruct') || length(job.dataStruct) < channel
-    empty = 1;
-  else
-    data = job.dataStruct{channel};
-    if isempty(data)
+    empty = 0;
+    if ~isfield(job,'dataStruct') || length(job.dataStruct) < channel
       empty = 1;
-    end
-  end
-  if empty
-    warning('Empty data in job %d. Did you choose the right channel?',i);
-    continue;
-  end
-
-  if isfield(data,'sisterList') && ~isempty(data.sisterList) && ~isempty(data.sisterList(1).coords1)
-    % Sister track coords, stored as sequential coordinates, e.g.
-    % an.sisterCoords1(:,1:3) selects x,y,z of first sister.
-    nSisters = length(data.sisterList);
-    sisterCount(i) = nSisters;
-    an.sisterCellIdx = [an.sisterCellIdx repmat(i,1,nSisters)];
-
-    % Expand if necessary.
-    nFrames = size(data.sisterList(1).coords1,1);
-    an.sisterCoords1 = expand(an.sisterCoords1, nFrames);
-    an.sisterCoords2 = expand(an.sisterCoords2, nFrames);
-
-    % Concatenate data.
-    for j=1:nSisters
-      an.sisterCoords1(1:nFrames,end+1:end+3) = data.sisterList(j).coords1(:,1:3);
-      an.sisterCoords2(1:nFrames,end+1:end+3) = data.sisterList(j).coords2(:,1:3);
-    end
-  end
-
-  if isfield(data,'trackList') && ~isempty(data.trackList)
-    % Track coords. Not the same as sister track coords as it includes parts
-    % of tracks unable to be assigned a pair.
-    nTracks = length(data.trackList);
-    trackCount(i) = nTracks;
-    an.trackCellIdx = [an.trackCellIdx repmat(i,1,nTracks)];
-
-    % Expand if necessary.
-    nFrames = size(data.trackList(1).coords,1);
-    an.trackCoords = expand(an.trackCoords, nFrames);
-
-    % Concatenate data.
-    for j=1:nTracks
-      an.trackCoords(1:nFrames,end+1:end+3) = data.trackList(j).coords(:,1:3);
-    end
-    an.hasTracks = 1;
-  end
-
-  if isfield(data,'trackInt') && ~isempty(data.trackInt)
-    % Track intensities.
-    nTracks = length(data.trackInt);
-    if ~isfield(data,'trackList') || nTracks ~= length(data.trackList)
-      warning('Size of trackInt does not match size of trackList');
-    end
-
-    if isempty(an.trackInt)
-      % Create struct array for number of channels.
-      nChannels = size(data.trackInt(1).intensity,2);
-      trackInt(1:nChannels) = struct('mean',[],'max',[],'min',[],'median',[]);
-      an.trackInt = trackInt; % KLUDGE can't reassign to struct
     else
-      if nChannels ~= length(an.trackInt)
-        error(['Number of intensity channels inconsistent. Now I don''t know ' ...
-               'which channel goes where...']);
+      data = job.dataStruct{channel};
+      if isempty(data)
+        empty = 1;
       end
     end
+    if empty
+      warning('Empty data in job %d. Did you choose the right channel?',i);
+      continue;
+    end
 
-    for j=1:nChannels
+    if isfield(data,'sisterList') && ~isempty(data.sisterList) && ~isempty(data.sisterList(1).coords1)
+      % Sister track coords, stored as sequential coordinates, e.g.
+      % an.sisterCoords1(:,1:3) selects x,y,z of first sister.
+      nSisters = length(data.sisterList);
+      sisterCount(jobctr) = nSisters;
+      an.sisterCellIdx = [an.sisterCellIdx repmat(jobctr,1,nSisters)];
+
       % Expand if necessary.
-      nFrames = size(data.trackInt(1).intensity,1);
-      an.trackInt(j).mean = expand(an.trackInt(j).mean, nFrames);
-      an.trackInt(j).max = expand(an.trackInt(j).max, nFrames);
-      an.trackInt(j).min = expand(an.trackInt(j).min, nFrames);
-      an.trackInt(j).median = expand(an.trackInt(j).median, nFrames);
-    end
+      nFrames = size(data.sisterList(1).coords1,1);
+      an.sisterCoords1 = expand(an.sisterCoords1, nFrames);
+      an.sisterCoords2 = expand(an.sisterCoords2, nFrames);
 
-    for j=1:nTracks
-      for k=1:nChannels
-        nFrames = size(data.trackInt(1).intensity,1);
-        an.trackInt(k).mean(1:nFrames,end+1) = data.trackInt(j).intensity(:,k);
-        an.trackInt(k).max(1:nFrames,end+1) = data.trackInt(j).intensity_max(:,k);
-        an.trackInt(k).min(1:nFrames,end+1) = data.trackInt(j).intensity_min(:,k);
-        an.trackInt(k).median(1:nFrames,end+1) = data.trackInt(j).intensity_median(:,k);
+      % Concatenate data.
+      for j=1:nSisters
+        an.sisterCoords1(1:nFrames,end+1:end+3) = data.sisterList(j).coords1(:,1:3);
+        an.sisterCoords2(1:nFrames,end+1:end+3) = data.sisterList(j).coords2(:,1:3);
       end
     end
-    an.hasTrackInt = 1;
+
+    if isfield(data,'trackList') && ~isempty(data.trackList)
+      % Track coords. Not the same as sister track coords as it includes parts
+      % of tracks unable to be assigned a pair.
+      nTracks = length(data.trackList);
+      trackCount(jobctr) = nTracks;
+      an.trackCellIdx = [an.trackCellIdx repmat(jobctr,1,nTracks)];
+
+      % Expand if necessary.
+      nFrames = size(data.trackList(1).coords,1);
+      an.trackCoords = expand(an.trackCoords, nFrames);
+
+      % Concatenate data.
+      for j=1:nTracks
+        an.trackCoords(1:nFrames,end+1:end+3) = data.trackList(j).coords(:,1:3);
+      end
+      an.hasTracks = 1;
+    end
+
+    if isfield(data,'trackInt') && ~isempty(data.trackInt)
+      % Track intensities.
+      nTracks = length(data.trackInt);
+      if ~isfield(data,'trackList') || nTracks ~= length(data.trackList)
+        warning('Size of trackInt does not match size of trackList');
+      end
+
+      if isempty(an.trackInt)
+        % Create struct array for number of channels.
+        nChannels = size(data.trackInt(1).intensity,2);
+        trackInt(1:nChannels) = struct('mean',[],'max',[],'min',[],'median',[]);
+        an.trackInt = trackInt; % KLUDGE can't reassign to struct
+      else
+        if nChannels ~= length(an.trackInt)
+          error(['Number of intensity channels inconsistent. Now I don''t know ' ...
+                 'which channel goes where...']);
+        end
+      end
+
+      for j=1:nChannels
+        % Expand if necessary.
+        nFrames = size(data.trackInt(1).intensity,1);
+        an.trackInt(j).mean = expand(an.trackInt(j).mean, nFrames);
+        an.trackInt(j).max = expand(an.trackInt(j).max, nFrames);
+        an.trackInt(j).min = expand(an.trackInt(j).min, nFrames);
+        an.trackInt(j).median = expand(an.trackInt(j).median, nFrames);
+      end
+
+      for j=1:nTracks
+        for k=1:nChannels
+          nFrames = size(data.trackInt(1).intensity,1);
+          an.trackInt(k).mean(1:nFrames,end+1) = data.trackInt(j).intensity(:,k);
+          an.trackInt(k).max(1:nFrames,end+1) = data.trackInt(j).intensity_max(:,k);
+          an.trackInt(k).min(1:nFrames,end+1) = data.trackInt(j).intensity_min(:,k);
+          an.trackInt(k).median(1:nFrames,end+1) = data.trackInt(j).intensity_median(:,k);
+        end
+      end
+      an.hasTrackInt = 1;
+    end
+    jobctr = jobctr+1;
   end
 end
 

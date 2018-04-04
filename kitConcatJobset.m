@@ -10,7 +10,7 @@ end
 
 % Concatenate movieFiles and crops.
 jobset = jobset1;
-concatFields = {'movieFiles','crop','cropSize'};
+concatFields = {'movieFiles','ROI'};
 for i=1:length(concatFields)
   f = concatFields{i};
   if size(jobset.(f),2) == 1

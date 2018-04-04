@@ -128,10 +128,10 @@ if md.pixelSize(1) ~= md.pixelSize(2)
 end
 dataProperties.PIXELSIZE_Z = md.pixelSize(3);
 dataProperties.NA = md.na;
-if isempty(job.crop)
+if isempty(job.ROI.crop)
     dataProperties.movieSize(1:2) = md.frameSize(1:2);
 else
-    dataProperties.movieSize(1:2) = job.cropSize(1:2);
+    dataProperties.movieSize(1:2) = job.ROI.cropSize(1:2);
 end
 dataProperties.movieSize(3) = md.frameSize(3);
 dataProperties.movieSize(4) = md.nFrames;

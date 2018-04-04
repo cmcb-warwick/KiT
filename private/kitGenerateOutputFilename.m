@@ -2,8 +2,7 @@ function outputName=kitGenerateOutputFilename(job)
 % KITGENERATEOUTPUTFILENAME Generate filename for output mat based on jobset name
 
 [~,jobsetName] = fileparts(job.filename);
-[moviePath,movieName] = fileparts(job.movie);
-
+[moviePath,movieName] = fileparts(job.ROI.movie);
 
 if isfield(job,'jobsetVersion') && job.jobsetVersion >= 5
   % Add index near front of filename to improve filesystem sorting.

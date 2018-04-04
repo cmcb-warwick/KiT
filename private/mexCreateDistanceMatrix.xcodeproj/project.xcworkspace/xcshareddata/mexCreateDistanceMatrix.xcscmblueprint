@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "85F51701EDC01417903DDEBAAA6CCC0F68299FF0",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "5A634AF4CC55D78F8CAEC2A40ADE7676533A341E" : 0,
+    "85F51701EDC01417903DDEBAAA6CCC0F68299FF0" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "76E85BFE-DF0E-456B-8A40-0898B9541E75",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "5A634AF4CC55D78F8CAEC2A40ADE7676533A341E" : "",
+    "85F51701EDC01417903DDEBAAA6CCC0F68299FF0" : "kit_v2\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "mexCreateDistanceMatrix",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "private\/mexCreateDistanceMatrix.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "ssh:\/\/137.205.183.44\/home\/jarmond\/public\/kinetocode.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "5A634AF4CC55D78F8CAEC2A40ADE7676533A341E"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/bitbucket.org\/jarmond\/kit.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "85F51701EDC01417903DDEBAAA6CCC0F68299FF0"
+    }
+  ]
+}

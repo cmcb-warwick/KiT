@@ -8,7 +8,7 @@ end
 vFilename = strrep(job.output, '.mat', '_zxproj.mj2');
 
 % Open movie.
-[md,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.movie));
+[md,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata);
 
 vWriter = VideoWriter(vFilename, 'Motion JPEG 2000');
 vWriter.FrameRate = 5;
@@ -20,11 +20,11 @@ maps = {@green, @red, @blue};
 markers = 'xo+*sd';
 maxMergeChannels = 3;
 for i=1:md.nFrames
-    rgbImg = zeros([job.cropSize([1 3]), 3]);
-    %rgbImg = zeros([job.cropSize([2 1]), 3]);
+    rgbImg = zeros([job.ROI.cropSize([1 3]), 3]);
+    %rgbImg = zeros([job.ROI.cropSize([2 1]), 3]);
     for c=1:min(md.nChannels, maxMergeChannels)
         % Read stack.
-        img = kitReadImageStack(reader, md, i, c, job.crop, 0);
+        img = kitReadImageStack(reader, md, i, c, job.ROI.crop, 0);
 
         % Max project.
         img = squeeze(max(img, [], 2));

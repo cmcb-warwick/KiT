@@ -1,4 +1,4 @@
-function filenames=kitFindFiles(directory,regexpr,incHidden,showprog)
+function filenames=kitFindFiles(directory,regexpr,incSort,incHidden,showprog)
 % KITFINDFILESWITHEXTENSION Recursively search for files by regexp.
 %
 %   FILENAMES = KITFINDFILESWITHEXTENSION(DIRECTORY,REGEXPR,INCHIDDEN)
@@ -19,9 +19,12 @@ function filenames=kitFindFiles(directory,regexpr,incHidden,showprog)
 % Copyright (c) 2013 Jonathan W. Armond
 
 if nargin<3
-  incHidden = 0;
+  incSort = 1;
 end
 if nargin<4
+  incHidden = 0;
+end
+if nargin<5
   showprog = 0;
 end
 
@@ -41,15 +44,27 @@ for i=1:length(files)
   % Search subdirectories.
   if files(i).isdir && (incHidden || currentName(1) ~= '.') ...
         && ~strncmp(currentName, '..', 2)
-    filenames = [filenames; kitFindFiles(fullfile(directory,currentName),regexpr)];
+    filenames = [filenames; kitFindFiles(fullfile(directory,currentName),regexpr,0)];
   end
-
+  
   if showprog
     waitbar(i/length(files),h);
   end
+end
+
+if incSort
+    filenames_sort = {};
+    for i=1:length(filenames)
+        temp = filenames{i,:};
+        inds = regexp(temp,regexpr);
+        filenames_sort = [filenames_sort; temp(inds(1):end) temp(1:inds(1)-1)];
+    end
+    [~,inds_sort] = sort(filenames_sort);
+    filenames = filenames(inds_sort);
 end
 
 if showprog
   close(h)
 end
 
+end

@@ -69,6 +69,11 @@ end
 % and determine break value
 cutValue = zeroList(indexList(cutIdx));
 
+% convert to NaN if isempty
+if isempty(cutValue)
+  cutValue = NaN;
+end
+
 % if verbose: plot.
 if verbose
   figure

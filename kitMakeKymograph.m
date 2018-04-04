@@ -79,7 +79,7 @@ if size(opts.saturate,1)<nChannels
 end
 
 % Open movie.
-[md,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.movie));
+[md,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata);
 
 ds = job.dataStruct{opts.trackChannel};
 if ~opts.trackIdx && (pairIdx > length(ds.sisterList) || pairIdx < 1)
@@ -158,7 +158,7 @@ for i=1:nFrames
 
   for j=1:nChannels
     % Read frame. FIXME using sister 1 z plane arbitrarily
-    plane = kitReadImagePlane(reader,md,i,j,coords1(i,3),job.crop);
+    plane = kitReadImagePlane(reader,md,i,j,coords1(i,3),job.ROI.crop);
 
     % First frame defines contrast stretch.
     if isnan(irange(mapChans(j),1))

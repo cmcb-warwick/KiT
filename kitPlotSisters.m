@@ -9,7 +9,7 @@ end
 
 % Set defaults
 opts.channel = 1;
-opts.sel = [];
+opts.subset = [];
 opts.useTracks = 0;
 opts.minLength = 0.75;
 % Process options
@@ -19,17 +19,28 @@ t = job.metadata.frameTime;
 dt = t(1,2)-t(1,1);
 
 dataStruct = job.dataStruct{opts.channel};
+if dataStruct.failed || ~isfield(dataStruct,'sisterList')
+  fprintf('\nSpot finding failed for this movie.\n\n');
+  return
+end
 sisterList = dataStruct.sisterList;
+if isempty(sisterList(1).trackPairs)
+  fprintf('\nNo sisters found in this movie.\n\n');
+  return
+end
+
 trackList = dataStruct.trackList;
 trackPairs = sisterList(1).trackPairs;
-if ~isempty(opts.sel)
-  sisterList = sisterList(opts.sel);
-elseif opts.minLength > 0
-    coords = horzcat(sisterList.coords1);
-    coords = coords(:,1:6:end); % X coordinate.
-    nancount = sum(isnan(coords),1);
-    sisterList = sisterList(nancount <= job.metadata.nFrames*(1-opts.minLength));
+if opts.minLength > 0 && isempty(opts.subset)
+  coords = horzcat(sisterList.coords1);
+  coords = coords(:,1:6:end); % X coordinate.
+  nancount = sum(isnan(coords),1);
+  opts.subset = find(nancount <= job.metadata.nFrames*(1-opts.minLength));
 end
+if isempty(opts.subset)
+  opts.subset = 1:length(sisterList);
+end
+sisterList = sisterList(opts.subset);
 nSisters = length(sisterList);
 
 figure;
@@ -49,7 +60,7 @@ for i=1:nSisters
     end
     t=((1:length(x1))-1)*dt;
     plot(t,x1,t,x2);
-    title(sprintf('sister %d tracks %d,%d',i,pair(1),pair(2)));
+    title(sprintf('sister %d tracks %d,%d',opts.subset(i),pair(1),pair(2)));
     xlim([t(1) t(end)]);
     xlabel('t');
     ylabel('x');

@@ -30,9 +30,9 @@ end
 
 % Set defaults
 opts.channel = 1;
-opts.cutoff = 6;
+opts.cutoff = 1000;
 opts.overlay = 1;
-opts.plotAx = 1:3;
+opts.plotAx = 1;
 opts.subset = [];
 opts.plotPole = 0;
 opts.nLongest = 0;
@@ -93,7 +93,7 @@ for j=1:length(opts.subset)
       plot(t,x1);
       title(['Track ' num2str(i)]);
       xlim([0 max(t)])
-      xlabel('time, s'); ylabel('x-distance, µm');
+      xlabel('time, s'); ylabel('x-position, µm');
       set(gca,'FontSize',8)
   else
       for h=opts.plotAx
@@ -102,7 +102,8 @@ for j=1:length(opts.subset)
           title(axName(h))
           x1=trackList(i).coords(:,h);
           plot(t,x1);
-          xlabel('time, s'); ylabel('x-distance, µm');
+          xlim([0 max(t)])
+          xlabel('time, s'); ylabel('position, µm');
           ylim([-12 12])
           set(gca,'FontSize',20)
       end
@@ -127,7 +128,8 @@ if opts.plotPole && ~isempty(poleSub)
         title(['Track ' num2str(i)]);
         pause(1)
         plot(t,x1);
-        xlabel('time, s'); ylabel('x-distance, µm');
+        xlim([0 max(t)])
+        xlabel('time, s'); ylabel('x-position, µm');
         set(gca,'FontSize',20)
 
     end
