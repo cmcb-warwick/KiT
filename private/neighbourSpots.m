@@ -3,8 +3,8 @@ function [spots,spotIDs] = neighbourSpots(movie,refDataStruct,channel,metadata,o
 % mixture model fitting
 %
 % Created by: J. W. Armond
-% Modified by: C. A. Smith
-% Copyright (c) 2017 C. A. Smith
+% Modified by: C. A. Smith, J. U. Harrison
+% Copyright (c) 2020 J. U. Harrison
 
 %% Input + initialization
 
@@ -98,6 +98,9 @@ end
 if asymMask == 1
   lMask = mask; % For -ve x pole attached.
   rMask = flipud(mask); % For +ve x pole attached.
+else 
+  lMask = mask;
+  rMask = mask;
 end
 if ~isempty(framesNoPlane)
     se = strel('disk', r, 0);
@@ -168,7 +171,7 @@ switch options.jobProcess
                        coords(2)-r coords(2)-r;...
                        coords(3)   coords(3) ];
 
-              if any(isnan(range(:))) || any(range(:,1)<=0) || any(range(:,2)>imageSize')
+              if any(isnan(range(:))) || any(range(:,1)<=0) || any(range(:,2)>imageSize(1:3)')
                   continue
               elseif range(3,1)<min(zSlices) || range(3,2)>max(zSlices)
                   continue
@@ -223,7 +226,7 @@ switch options.jobProcess
               locMaxCrd(2) = locMaxCrd(2)+coords(2)-(r+1);
               locMaxCrd(3) = coords(3);
 
-              if any(locMaxCrd>imageSize)
+              if any(locMaxCrd>imageSize(1:3))
                   continue
               end
 
@@ -259,7 +262,7 @@ switch options.jobProcess
                coords(2)-r coords(2)-r;...
                coords(3)   coords(3) ];
            
-      if any(isnan(range(:))) || any(range(:,1)<=0) || any(range(:,2)>imageSize')
+      if any(isnan(range(:))) || any(range(:,1)<=0) || any(range(:,2)>imageSize(1:3)')
           continue
       end
   
@@ -284,7 +287,7 @@ switch options.jobProcess
       locMaxCrd(2) = locMaxCrd(2)+coords(2)-(r+1);
       locMaxCrd(3) = coords(3);
       
-      if any(locMaxCrd>imageSize)
+      if any(locMaxCrd>imageSize(1:3))
           continue
       end
 

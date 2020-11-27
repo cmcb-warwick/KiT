@@ -83,7 +83,7 @@ for i=1:numWvs
 end
 if warnWv && verbose
   warning('Missing metadata: Assuming wavelengths %d, %d, %d nm',...
-          1000*md.wavelength);
+          1000*md.wavelength(1),1000*md.wavelength(2),1000*md.wavelength(3));
 end
 
 % Timepoints per plane
