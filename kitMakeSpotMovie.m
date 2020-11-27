@@ -115,7 +115,7 @@ end
 colors = presetColors();
 
 % Open movie.
-[md,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.movie));
+[md,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie));
 
 h = figure;
 clf;
@@ -167,7 +167,7 @@ insetSz = 0.5;
 insetOff = [1 -0.1];
 
 % marker size.
-markerSize = ceil(job.options.maskRadius / job.metadata.pixelSize(1));
+markerSize = ceil(job.options.intensity.maskRadius / job.metadata.pixelSize(1));
 
 if opts.zoomTrack > 0
   track = trackList(opts.zoomTrack);
@@ -180,7 +180,7 @@ if opts.zoomTrack > 0
       if ~isnan(track(i).coords(j,1))
         cds = track(i).coords(j,1:2);
         cds = cds ./ job.metadata.pixelSize(1:2);
-        cds = cds + job.cropSize([2 1])/2;
+        cds = cds + job.ROI.cropSize([2 1])/2;
         coords(j,:) = cds;
       end
     end
@@ -212,17 +212,16 @@ if size(opts.saturate,1)<md.nChannels
 end
 
 for i=1:md.nFrames
-  rgbImg = zeros([job.cropSize(dims), 3]);
+  rgbImg = zeros([job.ROI.cropSize(dims), 3]);
   for c=1:min(md.nChannels, maxMergeChannels)
     % Read stack.
-    img = kitReadImageStack(reader, md, i, c, job.crop, opts.normalize);
+    img = kitReadImageStack(reader, md, i, c, job.ROI.crop, opts.normalize);
 
     % Max project.
     img = max(img, [], 3);
-    if opts.transpose
-      img = img';
-    end
-
+    %if opts.transpose
+    %  img = img';
+    %end
     % First frame defines contrast stretch.
     if i==1
       irange(c,:)=stretchlim(img,opts.saturate(c,:)/100);
