@@ -51,6 +51,9 @@ an.nTracks = sum(an.nTracksPerCell);
 an.acceptedCellsIdx = find(an.acceptedCells);
 an.acceptedSisters = ismember(an.sisterCellIdx, an.acceptedCellsIdx) & ...
     prelimAcceptedSisters;
+if ~any(an.acceptedSisters)
+warning('No sisters accepted for this percentage of NaNs');
+end
 % Fixup sisterCellIdx to point to accepted cells.
 an.cellIdxMap = zeros(1,an.nLoadedCells);
 an.cellIdxMap(an.acceptedCells) = 1:an.nCells;

@@ -1,4 +1,4 @@
-function dataStruct = kitGroupSisters(dataStruct,verbose)
+function dataStruct = kitGroupSisters(dataStruct,verbose,allowMulti)
 % KITGROUPSISTERS groups sister kinetochores
 %
 % SYNOPSIS: dataStruct = kitGroupSisters(dataStruct)
@@ -9,6 +9,8 @@ function dataStruct = kitGroupSisters(dataStruct,verbose)
 %       verbose (opt) : 0 - no plotting (default)
 %                       1 - plot 4 frames with sister assignment
 %                       2 - 1 & plot all tracks
+%       allowMulti: boolean, allow multiple connections between grouped
+%       sisters. Optimization performed via mosek library. 
 %
 % OUTPUT dataStruct: Same as input, but with field sisterList
 %              sisterList is a structure with length equal to the number of
@@ -45,6 +47,7 @@ function dataStruct = kitGroupSisters(dataStruct,verbose)
 %         The code cannot handle merged/splitted tracks!
 %
 % Copyright (c) 2007 Jonas Dorn, Khuloud Jaqaman
+% Edited Jonathan U Harrison 2019-03-20
 
 %% TEST INPUT & READ PARAMETERS
 
@@ -52,11 +55,15 @@ if nargin < 2 || isempty(verbose)
     verbose = 0;
 end
 
+if nargin <3
+    allowMulti=0;
+end
+
 % read movieLength
 nTimepoints = dataStruct.dataProperties.movieSize(4);
 
 % read parameters
-minOverlap = nTimepoints * dataStruct.dataProperties.groupSisters.minOverlap/100;
+minOverlap = min(dataStruct.dataProperties.groupSisters.minOverlap,round(nTimepoints/10));
 % if minOverlap < 10
 %     minOverlap = 10;
 % end
@@ -110,7 +117,6 @@ if isempty(anaphaseFrames)
 else
     lastFrameNotAna = anaphaseFrames(1) - 1;
 end
-
 %if the whole movie is in anaphase, there's no point in looking for
 %sisters. Exit with an empty sisterList.
 if length(anaphaseFrames) == nTimepoints
@@ -168,7 +174,7 @@ for jTrack = 1:nGoodTracks % loop cols
         commonTimeNA = commonTime(ctNotAna); %not in anaphase
         ctColIdxNA = ctColIdx(ctNotAna);
         ctRowIdxNA = ctRowIdx(ctNotAna);
-        commonTimeA = commonTime(ctAna); %not in anaphase
+        commonTimeA = commonTime(ctAna); %in anaphase
         ctColIdxA = ctColIdx(ctAna);
         ctRowIdxA = ctRowIdx(ctAna);
         clear commonTime ctColIdx ctRowIdx
@@ -229,11 +235,9 @@ for jTrack = 1:nGoodTracks % loop cols
                     rMean = mean(distance);
                     rStd = std(distance);
                 end
-
                 %assign distance mean for pair
                 distances(iTrack,jTrack) = rMean;
                 distances(jTrack,iTrack) = rMean;
-
                 %assign distance variance for pair
                 variances(jTrack,iTrack) = rStd^2;
                 variances(iTrack,jTrack) = rStd^2;
@@ -241,6 +245,10 @@ for jTrack = 1:nGoodTracks % loop cols
                 %assign alignment cost for pair if the average angle is less
                 %than maxAngle degrees. Otherwise, keep as NaN to prohibit the link
                 if meanAlpha < maxAngle
+		            if verbose
+                        fprintf('\nrobust mean distance is %f pm %f compared to %f\n',rMean,rStd,maxDist);
+                        fprintf('\nrobust mean allignment is %f pm %f compared to %f\n',meanAlpha,stdAlpha,maxAngle);
+                    end
                     [alignment(jTrack,iTrack),alignment(iTrack,jTrack)]...
                         = deal(2*sqrt(3)*tan(meanAlpha)+1);
                 end
@@ -253,10 +261,9 @@ for jTrack = 1:nGoodTracks % loop cols
 end %(for jTrack = 1:nGoodTracks)
 
 %% CREATE COST MATRIX & GROUP
-
 [r2c,c2r,costMat,linkedIdx] = ...
     linkTracks(distances,variances,alignment,...
-    nGoodTracks,maxDist,useAlignment);
+    nGoodTracks,maxDist,useAlignment,allowMulti,verbose);
 
 if all(isnan(r2c))
     sisterList = struct('trackPairs',[],'coords1',[],...
@@ -266,6 +273,10 @@ if all(isnan(r2c))
 end
 
 %find pairs that get a unique assignment
+if allowMulti
+    c2rmosek = int32(c2r);
+    c2r=r2c;
+end
 goodPairIdxL = r2c==c2r;
 
 if verbose
@@ -362,20 +373,36 @@ end
 %   .sisterVectors
 %   .distances
 
-goodPairIdxL = r2c==c2r;
-linkedIdx=sub2ind([nGoodTracks nGoodTracks],find(goodPairIdxL),r2c(goodPairIdxL));
-nGoodPairs = sum(goodPairIdxL);
+if allowMulti
+    nGoodPairs = sum(c2rmosek>0 & ~isnan(r2c));
 sisterList(1:nGoodPairs/2,1) = ...
     struct('trackPairs',[],'coords1',NaN(nTimepoints,6),...
     'coords2',NaN(nTimepoints,6),'sisterVectors',NaN(nTimepoints,6),...
     'distances',NaN(nTimepoints,2));
 
 % write trackPairs. Store: pair1,pair2,cost,dist,var,alignment
+goodPairIdxL = (c2rmosek>0) & ~isnan(r2c);
 sisterList(1).trackPairs = ...
+    [goodTracks(c2rmosek(goodPairIdxL)),goodTracks(r2c(goodPairIdxL)),...
+    costMat(linkedIdx),distances(linkedIdx),variances(linkedIdx),...
+    alignment(linkedIdx)];
+sisterList(1).trackPairs(isnan(sisterList(1).trackPairs(:,6)),6) = 0;
+else
+    goodPairIdxL = r2c==c2r;
+    linkedIdx=sub2ind([nGoodTracks nGoodTracks],find(goodPairIdxL),r2c(goodPairIdxL));
+    nGoodPairs = sum(goodPairIdxL);
+sisterList(1:nGoodPairs/2,1) = ...
+    struct('trackPairs',[],'coords1',NaN(nTimepoints,6),...
+    'coords2',NaN(nTimepoints,6),'sisterVectors',NaN(nTimepoints,6),...
+    'distances',NaN(nTimepoints,2));
+
+% write trackPairs. Store: pair1,pair2,cost,dist,var,alignment
+    sisterList(1).trackPairs = ...
     [goodTracks(goodPairIdxL),goodTracks(r2c(goodPairIdxL)),...
     costMat(linkedIdx),distances(linkedIdx),variances(linkedIdx),...
     alignment(linkedIdx)];
 sisterList(1).trackPairs(isnan(sisterList(1).trackPairs(:,6)),6) = 0;
+end
 
 % remove redundancy
 sisterList(1).trackPairs(:,1:2) = sort(sisterList(1).trackPairs(:,1:2),2);
@@ -384,8 +411,40 @@ sisterList(1).trackPairs = unique(sisterList(1).trackPairs,'rows');
 % sort according to cost
 sisterList(1).trackPairs = sortrows(sisterList(1).trackPairs,3);
 
+%need to combine groups together into single tracks
+nSisterPairs = size(sisterList(1).trackPairs,1); %counting duplicates to merge
+[~,ISister1,~] = unique(sisterList(1).trackPairs(:,1), 'rows');
+ixDupSister1 = setdiff(1:nSisterPairs, ISister1);
+dupSister1Values = sisterList(1).trackPairs(ixDupSister1,1);
+
+[~,ISister2,~] = unique(sisterList(1).trackPairs(:,2), 'rows');
+ixDupSister2 = setdiff(1:nSisterPairs, ISister2);
+dupSister2Values = sisterList(1).trackPairs(ixDupSister2,2);
+
+
 % loop over trackPairs to get their coordinates and distances
-for iPair = 1:nGoodPairs/2
+for iPair = 1:nSisterPairs 
+    %%%%%%%%%%%
+    [lia1,lib1] = ismember(iPair,ixDupSister1); %check for duplicates in first column
+    [lia2,lib2] = ismember(iPair,ixDupSister2); %check for duplicates in second column
+    if lia1
+    %locate duplicates
+    dupPairIdx = find(sisterList(1).trackPairs(:,1)==dupSister1Values(lib1));
+    %get information for new second sister
+    [colCoords,colTime,colIdx,colCoordsStd] = ...
+        trackData(sisterList(1).trackPairs(iPair,2),dataStruct,trackStats);
+    sisterList(dupPairIdx(1)).coords2(colTime,:) = [colCoords(colIdx,:) ...
+        colCoordsStd(colIdx,:)];
+    elseif lia2 
+            %locate duplicates
+    dupPairIdx = find(sisterList(1).trackPairs(:,2)==dupSister2Values(lib2));
+    %get information for new first sister
+    [rowCoords,rowTime,rowIdx,rowCoordsStd] = ...
+        trackData(sisterList(1).trackPairs(iPair,1),dataStruct,trackStats);
+    sisterList(dupPairIdx(1)).coords1(rowTime,:) = [rowCoords(rowIdx,:) ...
+        rowCoordsStd(rowIdx,:)];
+    else %is not repeat occurrence of a duplicate  
+    %%%%%%%%%%
     
     %get information for first sister
     [rowCoords,rowTime,rowIdx,rowCoordsStd] = ...
@@ -398,13 +457,14 @@ for iPair = 1:nGoodPairs/2
     %find common time between them
     [commonTime,ctColIdx,ctRowIdx] = intersect(colTime,rowTime);
 
+%EDITED SO THAT WE DO NOT THROW AWAY INFORMATION ABOUT THE LONGER TRACK -JUH
     %store the coordinates of the first sister
-    sisterList(iPair).coords1(commonTime,:) = [rowCoords(rowIdx(ctRowIdx),:) ...
-        rowCoordsStd(rowIdx(ctRowIdx),:)];
+    sisterList(iPair).coords1(rowTime,:) = [rowCoords(rowIdx,:) ...
+        rowCoordsStd(rowIdx,:)];
 
     %store the coordinates of the second sister
-    sisterList(iPair).coords2(commonTime,:) = [colCoords(colIdx(ctColIdx),:) ...
-        colCoordsStd(colIdx(ctColIdx),:)];
+    sisterList(iPair).coords2(colTime,:) = [colCoords(colIdx,:) ...
+        colCoordsStd(colIdx,:)];
 
     %calculate the vector connecting the two sisters and its std (microns)
     sisterVectors = [colCoords(colIdx(ctColIdx),:) - rowCoords(rowIdx(ctRowIdx),:) ...
@@ -416,9 +476,10 @@ for iPair = 1:nGoodPairs/2
     sisterDistStd = sqrt(sum((sisterVectors(:,1:3)./repmat(sisterDist,1,3)).^2 .* ...
         sisterVectors(:,4:6).^2,2));
     sisterList(iPair).distances(commonTime,:) = [sisterDist sisterDistStd];
-    
+    end
 end % loop goodPairs
-
+sisterList([ixDupSister1,ixDupSister2])=[];
+nGoodPairs = nGoodPairs - 2*length([ixDupSister1,ixDupSister2]);
 %% remove extra large distances from sister pairing
 
 %for math behind algorithm, see Danuser, 1992 or Rousseeuw & Leroy, 1987
@@ -483,9 +544,26 @@ dataStruct.sisterList = sisterList;
 
 %% link tracks
 function [r2c,c2r,costMat,linkedIdx] = linkTracks(distances,variances,...
-    alignment,nGoodTracks,maxDist,useAlignment)
+    alignment,nGoodTracks,maxDist,useAlignment,allowMulti, verbose)
 
+if verbose
 % cutoff distances
+figure; 
+[f,x] = ecdf(distances(:));
+stairs(x,f,'linewidth',3);
+title('Distances');
+set(gca,'fontsize',20);
+figure;
+[f,x] = ecdf(variances(:));
+stairs(x,f,'linewidth',3);
+title('Variances');
+set(gca,'fontsize',20);
+figure;
+[f,x] = ecdf(alignment(:));
+stairs(x,f,'linewidth',3);
+title('Alignment');
+set(gca,'fontsize',20);
+end
 distCutoffIdx = distances>maxDist;
 distances(distCutoffIdx) = NaN;
 variances(distCutoffIdx) = NaN;
@@ -501,16 +579,34 @@ end
 
 % replace NaNs with -1
 costMat(isnan(costMat)) = -1;
-
+sum(costMat(:)~=-1)
 % lap costMat
 if all(costMat==-1)
     r2c = NaN(2*nGoodTracks,1);
     c2r = NaN(2*nGoodTracks,1);
 else
-    [r2c,c2r] = lap(costMat,-1,0,1);
+    if allowMulti
+        tic;    [r2c,c2r] = lapMosek(costMat,-1,1,1); toc
+        fprintf('%d extra connections included \n',sum(1 - diff(c2r)));
+        %c2r = r2c;        
+        %tic;    [r2c,c2r] = lap(costMat,-1,0,1,1); toc
+        %allowMulti=0;
+    else
+        tic;    [r2c,c2r] = lap(costMat,-1,0,1,1); toc
+    end
 end
 
-% shorten r2c, c2r. No link is NaN
+if allowMulti
+    % shorten r2c, c2r. No link is NaN
+r2c = double(r2c);
+r2c(r2c>nGoodTracks) = NaN;
+c2r = double(c2r);
+c2r(c2r>nGoodTracks) = NaN;
+linkedIdx=sub2ind([nGoodTracks,nGoodTracks],c2r,r2c);
+linkedIdx(isnan(linkedIdx)) = [];
+
+else
+    % shorten r2c, c2r. No link is NaN
 r2c = double(r2c(1:nGoodTracks));
 r2c(r2c>nGoodTracks) = NaN;
 c2r = double(c2r(1:nGoodTracks));
@@ -518,7 +614,7 @@ c2r(c2r>nGoodTracks) = NaN;
 
 linkedIdx=sub2ind([nGoodTracks nGoodTracks],1:nGoodTracks,r2c(1:nGoodTracks)');
 linkedIdx(isnan(linkedIdx)) = [];
-
+end
 
 %% PLOT/DEBUG FUNCTIONS
 function plotGroupResults(tt,r2c,nGoodTracks,goodTracks,dataStruct,variances,cutoff,figureName)

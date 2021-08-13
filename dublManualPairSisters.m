@@ -1,10 +1,10 @@
-function jobs = dublManualPairSisters(jobs,varargin)
-% KITMANUALPAIRSISTERS Manually select pairs of kinetochores.
+function dublManualPairSisters(jobset,varargin)
+% DUBLMANUALPAIRSISTERS Manually select pairs of kinetochores.
 %
 %    JOB = DUBLMANUALPAIRSISTERS(JOB,...) Images of each kinetochore found
 %    in a JOB are shown and their centre plotted (in white). Centres of
 %    nearby kinetochores (potential sisters, in green) are also shown, so
-%    that the user can double-click the spot they believe to be the
+%    that the user can click next to the spot they believe to be the
 %    original spot's sister.
 %    Kinetochores with no clear sister can be omitted from the sister list
 %    by pressing any key.
@@ -12,9 +12,6 @@ function jobs = dublManualPairSisters(jobs,varargin)
 %    previously decided to have no clear pair (yellow), are also plotted.
 %
 %    Options, defaults in {}:-
-%
-%    contrast: {{[0.1 1],[0.1 1],[0.1 1]}} or similar structure. A 1x3 cell
-%                   of pairs of numbers for use in image contrast.
 %
 %    coordChans: {[1 2]} or any subset of [1,2,3]. The channels for which
 %                   sisterList structures will be produced.
@@ -69,9 +66,8 @@ function jobs = dublManualPairSisters(jobs,varargin)
 
 % default options
 opts.chanOrder = [2 1 3]; % order of the channels in the movie
-opts.contrast = {[0.1 1] [0.1 1] [0.1 1]};
-opts.coordChans = [1 2]; % channels to process
-opts.imageChans = [1 2]; % imaging more channels may provide more information
+opts.contrast = {[0.1 0.9995] [0.1 0.9995] [0.1 1]};
+opts.imageChans = 1; % imaging more channels may provide more information
 opts.maxSisSep = 2.5; % maximum distance in µm between potential sisters being plotted
 opts.mode = 'dual';
 opts.plotChan = 1; % channel coordinates to be plotted for allocation
@@ -87,6 +83,10 @@ opts = processOptions(opts,varargin{:});
 warning('off','all')
 
 %% FRONT END
+
+% get jobs
+jobs = kitLoadAllJobs(jobset);
+
 % if no subset given, use full length of jobs
 if isempty(opts.subset)
     opts.subset = 1:length(jobs);
@@ -95,6 +95,7 @@ end
 % start counter
 counter = 1;
 nMovies = length(opts.subset);
+userStatus = 'completed';
 
 % loop over movies to run kitManualPairSisters
 for iMov = opts.subset
@@ -105,11 +106,11 @@ for iMov = opts.subset
     
     % find whether is a single z-stack, or a time series
     % perform sister pairing
-    if jobs{iMov}.metadata.nFrames > 1
-      [jobs{iMov},userStatus] = pairTracks(jobs{iMov},opts);
-    else
+%     if jobs{iMov}.metadata.nFrames > 1
+%       [jobs{iMov},userStatus] = pairTracks(jobs{iMov},opts);
+%     else
       [jobs{iMov},userStatus] = pairSpots(jobs{iMov},opts);
-    end
+%     end
     
     if strcmp(userStatus,'userPaused')
         [~,lastMovie] = find(opts.subset == iMov);

@@ -14,13 +14,17 @@ dataStruct.failed = 0;
 % get pixel and chromatic shift information
 pixelSize = job.metadata.pixelSize;
 chrShift = job.options.chrShift.result{options.coordSystemChannel,channel};
-% calculate alphaA based on pixel size
-% (standards: 0.05 at 138.1nm; 0.5 at 69.4nm)
-options.mmf.alphaA = options.mmf.alphaA.*(options.mmf.alphaA + (0.1381-pixelSize(1))*8)/0.05;
-% NOTE TO SELF: Use scaling factor = 6.5 for 0.5, or 8 for 0.6
+%DISABLING rescaling of alphaA. TODO: find out why this was used at all
+%% calculate alphaA based on pixel size
+%% (standards: 0.05 at 138.1nm; 0.5 at 69.4nm)
+if pixelSize(1)<0.1381 %otherwsie leave unchanged for large pixel sizes
+  options.mmf.alphaA = options.mmf.alphaA.*(options.mmf.alphaA + (0.1381-pixelSize(1))*8)/0.05;
+end
+%% NOTE TO SELF: Use scaling factor = 6.5 for 0.5, or 8 for 0.6
 
 % get number of frames
 nFrames = job.metadata.nFrames;
+updProg = (nFrames==1);
 is3D = job.metadata.is3D;
 ndims = 2 + is3D;
 %get initial guess of PSF sigma
@@ -62,7 +66,9 @@ end
 initCoord(frames) = struct('allCoord',[],'allCoordPix',[],'nSpots',0,'amp',[],'bg',[]);
 
 kitLog('Refining particles using mixture-model fitting');
-prog = kitProgress(0);
+if ~updProg
+  prog = kitProgress(0);
+end
 
 %if neighbour, firstly go over all empty images to give nan structures
 if neighbour
@@ -103,7 +109,8 @@ for iImage = goodImages
   opts.mmf.alphaD = opts.mmf.alphaD(channel);
   opts.mmf.alphaF = opts.mmf.alphaF(channel);
   % Run mixture model fitting.
-  [coordList,spotID,ampList,bgList,rejects] = mixtureModelFit(cands,imageRaw,psfSigma,opts);
+  [coordList,spotID,ampList,bgList,rejects] = ...
+      mixtureModelFit(cands,imageRaw,psfSigma,opts,updProg);
   
   elapsedTime = etime(clock,startTime);
   if options.mmf.maxMmfTime > 0 && elapsedTime > options.mmf.maxMmfTime
@@ -202,7 +209,9 @@ for iImage = goodImages
   end
 
   %display progress
-  prog = kitProgress(iImage/length(goodImages),prog);
+  if ~updProg
+    prog = kitProgress(iImage/length(goodImages),prog);
+  end
 end
 
 %% Post-processing

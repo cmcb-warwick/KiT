@@ -67,7 +67,6 @@ function kitManualPairSisters(jobset,varargin)
 % default options
 opts.chanOrder = [2 1 3]; % order of the channels in the movie
 opts.contrast = {[0.1 0.9995] [0.1 0.9995] [0.1 1]};
-opts.coordChans = [1 2]; % channels to process
 opts.imageChans = 1; % imaging more channels may provide more information
 opts.maxSisSep = 2.5; % maximum distance in µm between potential sisters being plotted
 opts.mode = 'dual';

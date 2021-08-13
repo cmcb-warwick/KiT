@@ -1,8 +1,8 @@
-function kitAnalysis(jobset,ch)
-% KITANALYSIS Produces a GUI using which the user can produce multiple
+function cuplAnalysis(jobset,ch)
+% CUPLANALYSIS Produces a GUI using which the user can produce multiple
 % plots.
 %
-%   kitAnalysis(jobset,channel)
+%   cuplAnalysis(jobset,channel)
 %
 %  jobset: Struct containing tracking job setup options, or cell array of
 %  multiple jobsets.
@@ -350,8 +350,12 @@ function autocorrCB(hObj,event)
   analysis = cuplAutocorrelation(analysis);
   updateStatus('');
   autocorrs = analysis.autocorrs;
+  [~,locs] = findpeaks(-autocorrs.sisters.m_dx,autocorrs.t);  
+  fprintf('Minima in the autocorrelation plot are at %f suggesting the period is %f s\n',locs(1),2*locs(1));
   cuplPlotCorrelation(autocorrs.t,autocorrs.sisters.m_dx,autocorrs.sisters.e_dx,...
     'PlotTitle','Mean autocorrelation of sister pair centres, dx');
+  cuplPlotCorrelation(autocorrs.t,autocorrs.sisters.cm_dx,autocorrs.sisters.ce_dx, ...
+    'PlotTitle','Mean autocorrelation by cell of sister pair centres, dx');
 end
 
 function distsCB(hObj,event)

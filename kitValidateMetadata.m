@@ -82,8 +82,12 @@ else
         try
           md.frameTime(iPlane,iTime) = metaTable.getPlaneDeltaT(0, counter).doubleValue();
         catch
-          % Use default, if missing metadata.
-          md.frameTime(iPlane,iTime) = defT;
+	  try
+	    md.frameTime(iPlane,iTime) = metaTable.getPlaneDeltaT(0, counter).value.double/1000; % in this format provided in milliseconds
+	  catch
+            % Use default, if missing metadata.
+            md.frameTime(iPlane,iTime) = defT;
+	  end
         end
         counter = counter+1;
       end
@@ -283,9 +287,9 @@ function updateControls(md)
   hs.is3D.Value = md.is3D;
   hs.nPlanes.String = num2str(md.nPlanes/(md.nChannels*md.nFrames));
   hs.nFrames.String = num2str(md.nFrames);
-  hs.nChannels = length(md.wavelength);
-  for iChan=1:hs.nChannels
-    hs.channelNum{iChan}.Value = (iChan==hs.nChannels);
+  hs.nChannels = md.nChannels;
+  for iChan=1:length(md.wavelength)
+    hs.channelNum{iChan}.Value = (iChan<=hs.nChannels);
     hs.wavelength{iChan}.String = num2str(md.wavelength(iChan)*1000);
   end
   for iCoord=1:3

@@ -54,7 +54,7 @@ opts.channelMap = [2 1 3]; % Green, red, blue
 opts.points = 100;
 opts.scale = [1 1];
 opts.scaleMethod = 'nearest';
-opts.fixture = 'sisters';
+opts.fixture = 'plate'; % or 'sisters'
 opts.margin = 1.0;
 opts.jet = 0;
 opts.trackIdx = 0; % Use pairIdx as a trackList indices not sisterList.
@@ -123,7 +123,7 @@ valid = zeros(nFrames,1);
 plateDist = nan;
 sisVec = [];
 for i=1:nFrames
-  if isnan(coords1(i,1)) && isempty(sisVec);
+  if isnan(coords1(i,1)) && isempty(sisVec)
     continue;
   end
   valid(i) = 1;
@@ -174,6 +174,8 @@ reader.close();
 
 % Trim off untracked regions.
 K = K(valid==1,:,:);
+% Convert NaNs to zero.
+K(isnan(K)) = 0;
 
 % Contrast stretch.
 for j=1:3
@@ -194,7 +196,7 @@ K = imresize(K, 'Scale', fliplr(opts.scale), 'Method', opts.scaleMethod);
 % Scale bar.
 if ~isempty(opts.scaleBar)
   off = 5;
-  wid = 4;
+  wid = 3;
   len = opts.scale(1)*opts.scaleBar(1)*round(1/md.pixelSize(1));
   % um horizontal
   K(end-off-wid+1:end-off,off:off+len-1,:) = ones(wid,len,3);
@@ -202,9 +204,6 @@ if ~isempty(opts.scaleBar)
   len = opts.scale(2)*opts.scaleBar(2);
   K(end-off-len+1:end-off,off:off+wid-1,:) = ones(len,wid,3);
 end
-
-% Convert NaNs to zero.
-K(isnan(K)) = 0;
 
 if opts.rotate
   K = imrotate(K,90);

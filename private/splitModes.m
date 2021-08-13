@@ -67,6 +67,7 @@ else
   [~, cutIdx] = min(zeroVals(indexList));
 end
 % and determine break value
+zeroList(indexList)
 cutValue = zeroList(indexList(cutIdx));
 
 % convert to NaN if isempty

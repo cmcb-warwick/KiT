@@ -35,6 +35,7 @@ function compiledInts = dublIntensityMeasurements(movies,varargin)
 % Copyright (c) 2018 C. A. Smith
 
 % default options
+opts.category = [];
 opts.channels = [1 2];
 opts.refMarker = 'self';
 opts.paired = 1;
@@ -186,20 +187,17 @@ for iExpt = 1:numExpts
                 iSubset = 1:length(refdS.sisterList);
             case 1 % using spots/tracks
                 iSubset = 1:length(refdS.sisterList);
-                theseTracks = subset{iExpt}(subset{iExpt}(:,1)==iMov,2)';
+                theseTracks = subset{iExpt}(subset{iExpt}(:,1)==movNum,2)';
             case 2 % using sisters
-                iSubset = subset{iExpt}(subset{iExpt}(:,1)==iMov,2)';
+                iSubset = subset{iExpt}(subset{iExpt}(:,1)==movNum,2)';
         end
         
         for iSis = iSubset
             
-          % construct sister pair label
-          label = sprintf('%02d%02d%03d',iExpt,iMov,iSis);
-            
           % start counter for storing data
           c=1;
 
-          % get trackID and spotIDs, make spotIDs nan if deselected
+          % get trackID and spotIDs, leave spotIDs nan if deselected
           trackIDs = refdS.sisterList(1).trackPairs(iSis,1:2);
           spotIDs = nan(nFrames,2);
           for iTrack = 1:2
@@ -213,12 +211,25 @@ for iExpt = 1:numExpts
               end
             end 
           end
+          % filter based on chosen category
+          if ~isempty(opts.category) && nFrames==1
+              if isfield(theseMovies{iMov},'categories') && ...
+                      isfield(theseMovies{iMov}.categories,opts.category)
+                  spotIDs = intersect(spotIDs,theseMovies{iMov}.categories.(opts.category));
+              else
+                  trackIDs = [NaN NaN];
+              end
+          end
           % if both spots skipped
           if all(isnan(trackIDs))
             continue
           end
+          
+          % construct sister pair label
+          label = sprintf('%02d%02d%03d',iExpt,iMov,iSis);
+          newData(c,:) = {'label',repmat(label,nFrames,1)}; c=c+1;
             
-            % get intensities if required
+          % get intensities if required
           intsInnerMean = nan(nFrames,2);
           intsOuterMean = nan(nFrames,2);
           intsInnerMax = nan(nFrames,2);
@@ -227,64 +238,64 @@ for iExpt = 1:numExpts
             if size(sIinner.intensity,2)==1
               for iFrame = 1:nFrames
                 % inner mean int
-                temp = cat(2,sIinner(iFrame).intensity) - innerBg(iFrame,1);
-                intsInnerMean(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),1);
+                temp = cat(2,sIinner(iFrame).intensity) - innerBg;
+                intsInnerMean(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),1);
                 % inner max int
-                temp = cat(2,sIinner(iFrame).intensity_max) - innerBg(iFrame,1);
-                intsInnerMax(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),1);
+                temp = cat(2,sIinner(iFrame).intensity_max) - innerBg;
+                intsInnerMax(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),1);
                 % outer mean int
-                temp = cat(2,sIouter(iFrame).intensity) - outerBg(iFrame,1);
-                intsOuterMean(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),1);
+                temp = cat(2,sIouter(iFrame).intensity) - outerBg;
+                intsOuterMean(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),1);
                 % outer max int
-                temp = cat(2,sIouter(iFrame).intensity_max) - outerBg(iFrame,1);
-                intsOuterMax(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),1);
+                temp = cat(2,sIouter(iFrame).intensity_max) - outerBg;
+                intsOuterMax(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),1);
               end
             else
               switch opts.refMarker
                 case 'self'
                   for iFrame = 1:nFrames
                     % inner mean int
-                    temp = cat(2,sIinner(iFrame).intensity) - innerBg(iFrame,1);
-                    intsInnerMean(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
+                    temp = cat(2,sIinner(iFrame).intensity) - innerBg;
+                    intsInnerMean(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
                     % inner max int
-                    temp = cat(2,sIinner(iFrame).intensity_max) - innerBg(iFrame,1);
-                    intsInnerMax(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
+                    temp = cat(2,sIinner(iFrame).intensity_max) - innerBg;
+                    intsInnerMax(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
                     % outer mean int
-                    temp = cat(2,sIouter(iFrame).intensity) - outerBg(iFrame,1);
-                    intsOuterMean(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
+                    temp = cat(2,sIouter(iFrame).intensity) - outerBg;
+                    intsOuterMean(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
                     % outer max int
-                    temp = cat(2,sIouter(iFrame).intensity_max) - outerBg(iFrame,1);
-                    intsOuterMax(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
+                    temp = cat(2,sIouter(iFrame).intensity_max) - outerBg;
+                    intsOuterMax(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
                   end
                 case 'inner'
                   for iFrame = 1:nFrames
                     % inner mean int
-                    temp = cat(2,sIinner(iFrame).intensity) - innerBg(iFrame,1);
-                    intsInnerMean(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
+                    temp = cat(2,sIinner(iFrame).intensity) - innerBg;
+                    intsInnerMean(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
                     % inner max int
-                    temp = cat(2,sIinner(iFrame).intensity_max) - innerBg(iFrame,1);
-                    intsInnerMax(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
+                    temp = cat(2,sIinner(iFrame).intensity_max) - innerBg;
+                    intsInnerMax(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
                     % outer mean int, relative to inner
-                    temp = cat(2,sIinner(iFrame).intensity) - outerBg(iFrame,1);
-                    intsOuterMean(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
+                    temp = cat(2,sIinner(iFrame).intensity) - outerBg;
+                    intsOuterMean(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
                     % outer max int, relative to inner
-                    temp = cat(2,sIinner(iFrame).intensity_max) - outerBg(iFrame,1);
-                    intsOuterMax(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
+                    temp = cat(2,sIinner(iFrame).intensity_max) - outerBg;
+                    intsOuterMax(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
                   end
                 case 'outer'
                   for iFrame = 1:nFrames
                     % inner mean int, relative to outer
-                    temp = cat(2,sIouter(iFrame).intensity) - innerBg(iFrame,1);
-                    intsInnerMean(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
+                    temp = cat(2,sIouter(iFrame).intensity) - innerBg;
+                    intsInnerMean(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
                     % inner max int, relative to outer
-                    temp = cat(2,sIouter(iFrame).intensity_max) - innerBg(iFrame,1);
-                    intsInnerMax(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
+                    temp = cat(2,sIouter(iFrame).intensity_max) - innerBg;
+                    intsInnerMax(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(1));
                     % outer mean int
-                    temp = cat(2,sIouter(iFrame).intensity) - outerBg(iFrame,1);
-                    intsOuterMean(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
+                    temp = cat(2,sIouter(iFrame).intensity) - outerBg;
+                    intsOuterMean(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
                     % outer max int
-                    temp = cat(2,sIouter(iFrame).intensity_max) - outerBg(iFrame,1);
-                    intsOuterMax(iFrame,:) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
+                    temp = cat(2,sIouter(iFrame).intensity_max) - outerBg;
+                    intsOuterMax(iFrame,~isnan(spotIDs)) = temp(spotIDs(~isnan(spotIDs)),chanVect(2));
                   end
               end
             end
@@ -297,7 +308,7 @@ for iExpt = 1:numExpts
           newData(c,:) = {'intensity.max.outer',intsOuterMax}; c=c+1;
           newData(c,:) = {'intensity.bg.inner',repmat(innerBg,size(intsInnerMean,1),1)}; c=c+1;
           newData(c,:) = {'intensity.bg.outer',repmat(outerBg,size(intsOuterMean,1),1)}; c=c+1;
-        
+          
           % compile new data with original
           allData = combineStrForms(allData,newData);
           
@@ -316,10 +327,19 @@ for iExpt = 1:numExpts
             case 0 % no spot selection
                 spotIDs = 1:size(refdS.initCoord(1).allCoord,1);
             case 1 % using spots/tracks
-                trackIDs = subset{iExpt}(subset{iExpt}(:,1)==iMov,2)';
+                trackIDs = subset{iExpt}(subset{iExpt}(:,1)==movNum,2)';
                 spotIDs = cat(2,dSinner.trackList(trackIDs).featIndx);
             case 3 % using initCoord
-                spotIDs = subset{iExpt}(subset{iExpt}(:,1)==iMov,2)';
+                spotIDs = subset{iExpt}(subset{iExpt}(:,1)==movNum,2)';
+          end
+          % filter based on chosen category
+          if ~isempty(opts.category)
+              if isfield(theseMovies{iMov},'categories') && ...
+                      isfield(theseMovies{iMov}.categories,opts.category)
+                  spotIDs = intersect(spotIDs,theseMovies{iMov}.categories.(opts.category));
+              else
+                  spotIDs = [];
+              end
           end
           nSpots = length(spotIDs);
           if nSpots == 0
@@ -328,7 +348,7 @@ for iExpt = 1:numExpts
           
           % construct spot label
           for iSpot = 1:nSpots
-            labels(iSpot,:) = sprintf('%02d%02d%03d',iExpt,iMov,iSpot);
+            labels(iSpot,:) = sprintf('%02d%02d%03d',iExpt,iMov,spotIDs(iSpot));
           end
           % put data into string format
           newData(c,:) = {'label',labels}; c=c+1;
@@ -406,10 +426,10 @@ for iExpt = 1:numExpts
           
           % compile new data with original
           allData = combineStrForms(allData,newData);  
-          clear newData spotIDs
+          clear newData spotIDs labels
             
       end % paired
-    end % movies     
+    end % movies
 end % expts
 
 %% Save results to structure

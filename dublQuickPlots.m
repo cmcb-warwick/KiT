@@ -2,6 +2,9 @@ function dublQuickPlots()
 % DUBLQUICKPLOTS Displays GUI to allow user to produce plots of various
 % dual-channel analyses.
 %
+% When loading experiments, need to load saved output from
+% dublIntraMeasurements.
+%
 % Copyright (c) 2017 C. A. Smith
 
 % Set up GUI.

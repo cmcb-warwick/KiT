@@ -22,7 +22,7 @@ end
 if progress
   h = waitbar(0,'Opening movie');
 end
-[metadata,reader] = kitOpenMovie(movieFileName);
+[metadata,reader] = kitOpenMovie(movieFileName,'ROI');
 
 % Load subset of frames and overlay.
 nImages = 10;

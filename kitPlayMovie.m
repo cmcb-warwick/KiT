@@ -59,9 +59,9 @@ if ~isempty(outfile)
 end
 
 if isempty(cropSize)
-  imgSize = md.frameSize(1:2)
+  imgSize = md.frameSize(1:2);
 else
-  imgSize = cropSize(1:2)
+  imgSize = cropSize(1:2);
 end
 
 for i=1:md.nFrames

@@ -117,7 +117,7 @@ if isempty(opts.jobsetMovie)
         warning('Job provided is in cell format. Please ensure that you have provided a single job and not a full experiment.');
     end
     jobID = job.index;
-    [md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata);
+    [md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),'valid',job.metadata);
     if opts.crop==1
       crop = job.ROI.crop;
       cropSize = job.ROI.cropSize;
@@ -128,9 +128,9 @@ if isempty(opts.jobsetMovie)
 else
     jobID = opts.jobsetMovie;
     if isfield(job,'metadata')
-      [md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata{jobID});
+      [md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI(jobID).movie),'valid',job.metadata{jobID},1);
     else
-      [md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie));
+      [md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI(jobID).movie),'init',[],1);
     end
     if opts.crop==1
       crop = job.ROI(jobID).crop;
@@ -145,6 +145,11 @@ end
 coordSysChan = job.options.coordSystemChannel;
 pixelSize = md.pixelSize(1:3);
 chrShift = job.options.chrShift.result;
+
+% check image channels
+if length(opts.imageChans) > md.nChannels
+    error('Too many channels requested for image. Revise ''imageChans'' option.');
+end
 
 % subpixelate value
 if length(opts.imageChans)==1

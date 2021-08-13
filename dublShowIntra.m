@@ -51,14 +51,16 @@ else
 end
 
 % and coordinate-specific sister separation
-sisSep(:,1) = intraStruct.plate.sisSep.x;
-sisSep(:,2) = intraStruct.plate.sisSep.y;
-sisSep(:,3) = intraStruct.plate.sisSep.z;
-sisSep = [sisSep;-sisSep];
+if opts.rotate
+    sisSep(:,1) = intraStruct.plate.sisSep.x;
+    sisSep(:,2) = intraStruct.plate.sisSep.y;
+    sisSep(:,3) = intraStruct.plate.sisSep.z;
+    sisSep = [sisSep;-sisSep];
 
-% get x-positions
-positX = intraStruct.plate.coords.x(:,[1 3]);
-positX = [positX; fliplr(positX)];
+    % get x-positions
+    positX = intraStruct.plate.coords.x(:,[1 3]);
+    positX = [positX; fliplr(positX)];
+end
 
 % get numbers
 nKTs = size(delta,1);

@@ -133,6 +133,8 @@ if factor ~= -1
 
             % number of bins: divide data range by binLength
             nBins = round((max(data)-min(data))/binLength);
+            % prevent ridiculously many bins from being used
+            nBins = min(nBins, 10^5);
 
             if ~isfinite(nBins)
                 nBins = length(unique(data));

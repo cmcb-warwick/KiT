@@ -72,6 +72,9 @@ end
 if all(~jobset.options.intensity.execute)
   options.tasks = setdiff(options.tasks,9);
 end
+if ~ismember(options.tasks,1)
+    options.existing = 1;
+end
 
 % If using matlabpool for parallel computation, report workers.
 [~,name] = fileparts(jobset.filename);
@@ -201,8 +204,6 @@ end
 diagfile = fullfile(pathstr,[diagfile '.txt']);
 fid = fopen(diagfile,'wt');
 C = onCleanup(@() fclose(fid));
-for c = 1:length(jobset.options.coordMode)
-  if ~strcmp(jobset.options.coordMode{c}, 'none')
-    kitJobsetDiagnostics(jobset,c,0,fid);
-  end
-end
+c = 1:length(jobset.options.coordMode);
+cindx = ~strcmp(jobset.options.coordMode, 'none');
+kitJobsetDiagnostics(jobset,c(cindx),0,fid);

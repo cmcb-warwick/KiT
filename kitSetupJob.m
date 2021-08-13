@@ -209,11 +209,18 @@ function hs = createControls()
   t = label(hs.tabs{tabID},'Primary spot detection',[labx taby labw h],smallfont);
   t.FontWeight = 'Bold';
   taby = taby-h;
+  hs.globalBackground = checkbox(hs.tabs{tabID},'Use global background', [labx taby w h],'',tinyfont);
+  taby = taby-h;
+  hs.robustObjectiveFn = checkbox(hs.tabs{tabID},'Use robust objective function', [labx taby w h],'',tinyfont);
+  taby = taby-h;
   hs.minSpotsText = label(hs.tabs{tabID},'Min spots per frame',[labx taby labw h],tinyfont);
   hs.minSpots = editbox(hs.tabs{tabID},[],[editx taby editw h],tinyfont);
   taby = taby-h;
   hs.maxSpotsText = label(hs.tabs{tabID},'Max spots per frame',[labx taby labw h],tinyfont);
   hs.maxSpots = editbox(hs.tabs{tabID},[],[editx taby editw h],tinyfont);
+  taby = taby-h;
+  hs.realisticNumSpotsText = label(hs.tabs{tabID},'Realistic number of spots',[labx taby labw h],tinyfont);
+  hs.realisticNumSpots = editbox(hs.tabs{tabID},[],[editx taby editw h],tinyfont);
   taby = taby-h;
   hs.manualFrameSpaceText = label(hs.tabs{tabID},'Manual detection frame spacing',[labx taby labw h],tinyfont);
   hs.manualFrameSpace = editbox(hs.tabs{tabID},[],[editx taby editw h],tinyfont);
@@ -257,6 +264,8 @@ function hs = createControls()
   hs.tabs{tabID} = uitab('Parent', hs.tabP, 'Title', 'MMF');
   taby = tabtoplabely;
   hs.mmfAddSpots = checkbox(hs.tabs{tabID},'Resolve sub-resolution spots',[labx taby w h],'',tinyfont);
+  taby = taby-h;
+  hs.mmfDeconvolvedDataCorrection = checkbox(hs.tabs{tabID},'Using deconvolved data', [labx taby w h],'',tinyfont);
   taby = taby-h;
   hs.maxMmfTimeText = label(hs.tabs{tabID},'Max MMF time per frame (s)',[labx taby labw h],tinyfont);
   hs.maxMmfTime = editbox(hs.tabs{tabID},[],[editx taby editw h],tinyfont);
@@ -364,7 +373,7 @@ function hs = createControls()
       hs.intensityMaskShapeText = label(hs.tabs{tabID},'Mask shape',[labx taby labw h],tinyfont);
       hs.intensityMaskShape = popup(hs.tabs{tabID},maskValues,[editx-editw taby editw*2 h],[],tinyfont);
       taby = taby-h;
-      hs.intensityMaskRadiusText = label(hs.tabs{tabID},'Mask radius (um)',[labx taby labw h],tinyfont);
+      hs.intensityMaskRadiusText = label(hs.tabs{tabID},'Mask radius (nm)',[labx taby labw h],tinyfont);
       hs.intensityMaskRadius = editbox(hs.tabs{tabID},[],[editx taby editw h],tinyfont);
   end
   
@@ -474,10 +483,14 @@ function updateControls(jobset)
     autoRadiiCB();
   end
   
+  hs.globalBackground.Value = opts.globalBackground;
+  hs.robustObjectiveFn.Value = opts.robustObjectiveFn;
   hs.minSpots.String = num2str(opts.minSpotsPerFrame);
   hs.maxSpots.String = num2str(opts.maxSpotsPerFrame);
+  hs.realisticNumSpots.String = num2str(opts.realisticNumSpots);
   hs.manualFrameSpace.String = num2str(opts.manualDetect.frameSpacing);
   hs.mmfAddSpots.Value = opts.mmf.addSpots;
+  hs.mmfDeconvolvedDataCorrection.Value = opts.deconvolvedDataCorrection;
   hs.maxMmfTime.String = num2str(opts.mmf.maxMmfTime);
   for iChan=1:3
     hs.alphaA{iChan}.String = num2str(opts.mmf.alphaA(iChan));
@@ -515,7 +528,7 @@ function updateControls(jobset)
       hs.intensityExecute{iChan}.Value = opts.intensity.execute(iChan);
     end
     hs.intensityMaskShape.Value = mapStrings(opts.intensity.maskShape,maskValuesJS);
-    hs.intensityMaskRadius.String = num2str(opts.intensity.maskRadius);
+    hs.intensityMaskRadius.String = num2str(opts.intensity.maskRadius*1000);
     intensityOptionsCB();
     
     for iChan=1:3
@@ -617,6 +630,13 @@ function tf=checkControls()
     return
   end
 
+  v = str2double(hs.realisticNumSpots.String);
+  if ~isfinite(v) || v < 0
+    errorbox('Invalid value for min spots per frame. Should be a positive number.')
+    tf = false;
+    return
+  end
+
   v = str2double(hs.maxMmfTime.String);
   if (hs.mmfAddSpots.Value == hs.mmfAddSpots.Max) && (~isfinite(v) || v < 0)
     errorbox('Invalid value for min spots per frame. Should be a positive number or zero.')
@@ -677,7 +697,7 @@ function cropROICB(hObj,event)
         jobset.ROI(r).cropSize = cropSize(j,:);
       end
     end
-    waitbar(i/length(v),waitmsg);
+    waitbar(i/length(v),hwait,waitmsg);
   end
   populateROIBox();
   close(hwait);
@@ -708,8 +728,8 @@ function addROICB(hObj,event)
   % Loop over selected movies.
   for i=1:length(v)
     [md,~]=kitOpenMovie(fullfile(movieDir,movieFiles{v(i)}));
-    crop = [1 1 md.frameSize(1:2)];
-    cropSize = md.frameSize(1:3);
+    crop = [1 1 md.frameSize([2,1])];
+    cropSize = md.frameSize([2,1,3]);
     r = length(jobset.ROI) + 1;
     jobset.ROI(r).movie = handles.movies.String{v(i)};
     jobset.ROI(r).crop = crop;
@@ -752,11 +772,19 @@ function detectModeCB(hObj,event)
     handles.minSpotsText.Enable = 'on';
     handles.maxSpots.Enable = 'on';
     handles.maxSpotsText.Enable = 'on';
+    handles.realisticNumSpots.Enable = 'off';
+    handles.realisticNumSpotsText.Enable = 'off';
+    handles.globalBackground.Enable = 'off';
+    handles.robustObjectiveFn.Enable = 'off';
   else
     handles.minSpots.Enable = 'off';
     handles.minSpotsText.Enable = 'off';
     handles.maxSpots.Enable = 'off';
     handles.maxSpotsText.Enable = 'off';
+    handles.realisticNumSpots.Enable = 'on';
+    handles.realisticNumSpotsText.Enable = 'on';
+    handles.globalBackground.Enable = 'on';
+    handles.robustObjectiveFn.Enable = 'on';
   end
   if strcmp(mapStrings(handles.detectMode.Value,spotDetectValues),'Manual')
     handles.manualFrameSpaceText.Enable = 'on';
@@ -771,6 +799,7 @@ end
 function refineModeCB(hObj,event)
   if strcmp(mapStrings(handles.refineMode.Value,spotRefineValues),'MMF')
     handles.mmfAddSpots.Enable = 'on';
+    handles.mmfDeconvolvedDataCorrection.Enable = 'on';
     handles.maxMmfTimeText.Enable = 'on';
     handles.maxMmfTime.Enable = 'on';
     handles.alphaAText.Enable = 'on';
@@ -785,6 +814,7 @@ function refineModeCB(hObj,event)
     end
   else
     handles.mmfAddSpots.Enable = 'off';
+    handles.mmfDeconvolvedDataCorrection.Enable = 'off';
     handles.maxMmfTimeText.Enable = 'off';
     handles.maxMmfTime.Enable = 'off';
     handles.alphaAText.Enable = 'off';
@@ -1134,7 +1164,7 @@ function updateJobset()
     if handles.autoRadii.Value
       opts.autoRadiidt = str2double(handles.autoRadiidt.String);
 %       opts.autoRadiiAvgDisp = str2double(handles.autoRadiiAvgDisp.String)/60;
-      r = computeSearchRadii(opts.autoRadiidt,str2double(handles.autoRadiiAvgDisp)/60);
+      r = computeSearchRadii(opts.autoRadiidt,str2double(handles.autoRadiiAvgDisp.String)/60);
     else
       opts.autoRadiidt = [];
       r = zeros(2,1);
@@ -1152,10 +1182,15 @@ function updateJobset()
   % Primary spot detection options.
   opts.minSpotsPerFrame = str2double(handles.minSpots.String);
   opts.maxSpotsPerFrame = str2double(handles.maxSpots.String);
+  opts.realisticNumSpots = str2double(handles.realisticNumSpots.String);
   opts.manualDetect.frameSpacing = str2double(handles.manualFrameSpace.String);
+  opts.globalBackground = handles.globalBackground.Value;
+  opts.robustObjectiveFn = handles.robustObjectiveFn.Value;
   % MMF options.
   mmf = opts.mmf;
   mmf.addSpots = handles.mmfAddSpots.Value;
+  opts.deconvolvedDataCorrection = handles.mmfDeconvolvedDataCorrection.Value;
+
   mmf.maxMmfTime = str2double(handles.maxMmfTime.String);
   for iChan=1:3
     mmf.alphaA(iChan) = str2double(handles.alphaA{iChan}.String);
@@ -1197,7 +1232,7 @@ function updateJobset()
       intensity.execute(iChan) = handles.intensityExecute{iChan}.Value;
     end
     intensity.maskShape = mapStrings(handles.intensityMaskShape.Value,maskValuesJS);
-    intensity.maskRadius = str2double(handles.intensityMaskRadius.String);
+    intensity.maskRadius = str2double(handles.intensityMaskRadius.String)/1000;
     intensity.photobleachCorrect = intensity.photobleachCorrect*strcmp(handles.mode,'zandt');
     opts.intensity = intensity;
   end
