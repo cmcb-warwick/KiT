@@ -30,12 +30,13 @@ function kitShowDragonTails(job,varargin)
 % Example usage: kitShowDragonTails(job,'crop',-1,'tracks',[58,93,133,143,168,197],'tailLength',99,'timePoint',1)
 %
 % Copyright (c) 2020 Jonathan U Harrison
-%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % default options
 opts.channel = 1;
 opts.contrast = {[0.1 1],[0.1 1],[0.1 1]};
 opts.crop = 1;
+opts.plotColors = {'c','m'};
 opts.tailLength = 10; %timepoints
 opts.timePoint = 1; %centre of dragon tail
 opts.tracks = [];
@@ -118,6 +119,6 @@ end
         end
         
         % plot tracks
-        plot(trackCoords(1:opts.tailLength+1,1),trackCoords(1:opts.tailLength+1,2),'c','LineWidth',1.5)
-        plot(trackCoords(opts.tailLength+1:end,1),trackCoords(opts.tailLength+1:end,2),'m','LineWidth',1.5)
+        plot(trackCoords(1:opts.tailLength+1,1),trackCoords(1:opts.tailLength+1,2),opts.plotColors{1},'LineWidth',1.5)
+        plot(trackCoords(opts.tailLength+1:end,1),trackCoords(opts.tailLength+1:end,2),opts.plotColors{2},'LineWidth',1.5)
     end

@@ -7,12 +7,16 @@ function kitShowSisterPair(job,varargin)
 %
 %    Options, defaults in {}:-
 %
-%    channel: {1}, 2 or 3. Which channel to show.
+%    channel: {1}, 2 or 3. Which channel to get coords from.
+%    
+%    channelPlot {1}, 2 or 3. Which channel to plot for background
 %
 %    contrast: {[0.1 1]} or similar two-element vector. Range over which to
 %           contrast images. Tips:
 %               - Increase brightness by changing to [0.1 0.9]
 %               - Decrease background noise by changing to [0.5 1]
+%
+%     markerColor {'k'} Color for cross/marker to indicate position of sisters
 %
 %    newFig: {0} or 1. Whether or not to show the sister pair in a new
 %           figure.
@@ -58,6 +62,8 @@ opts.withinFig = 0;
 opts.zoomScale = 1;
 opts.zoom = 1;
 opts.zProject = -1;
+opts.channelPlot = 1;
+opts.markerColor = 'k';
 
 % process options
 opts = processOptions(opts, varargin{:});
@@ -70,6 +76,7 @@ opts = processOptions(opts, varargin{:});
 % get coordinate system and plot channels
 chan = opts.channel;
 refChan = job.options.coordSystemChannel;
+chanPlot = opts.channelPlot;
 % get chromatic shift
 chrShift = job.options.chrShift.result{refChan,chan}(1:3);
 
@@ -121,7 +128,7 @@ centrePxl = round(centrePxl);
 %% Image production
 
 % read stack
-img = kitReadImageStack(reader,md,timePoint,chan,job.ROI.crop,0);
+img = kitReadImageStack(reader,md,timePoint,chanPlot,job.ROI.crop,0);
 % max project over three z-slices around point
 if opts.zProject == 1
     img = max(img, [], 3);
@@ -184,10 +191,10 @@ hold on
 for iSis = 1:2
     if opts.transpose
         plot(coords(iSis,2),coords(iSis,1),...
-            'Color','k','Marker','x','MarkerSize',15)
+            'Color',opts.markerColor,'Marker','x','MarkerSize',15)
     else
         plot(coords(iSis,1),coords(iSis,2),...
-            'Color','k','Marker','x','MarkerSize',15)
+            'Color',opts.markerColor,'Marker','x','MarkerSize',15)
     end
 end
 

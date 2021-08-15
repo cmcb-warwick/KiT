@@ -38,14 +38,6 @@ filters = createFilters(ndims,job.dataStruct{channel}.dataProperties);
 % Read image
 movie = kitReadWholeMovie(reader,job.metadata,channel,job.ROI.crop,0,1);
 [imageSizeX,imageSizeY,imageSizeZ,~] = size(movie);
-if options.deconvolve
-  kitLog('Deconvolving');
-  p=kitProgress(0);
-  for i=1:nFrames
-    movie(:,:,:,i) = deconvlucy(movie(:,:,:,i),job.psf);
-    p=kitProgress(i/nFrames,p);
-  end
-end
 
 % Initialize output structure
 localMaxima = repmat(struct('cands',[]),nFrames,1);
@@ -62,7 +54,22 @@ switch spotMode
 
   case 'adaptive'
     kitLog('Detecting particle candidates using adaptive thresholding');
-    spots = adaptiveSpots(movie,options.adaptiveLambda,options.debug.showAdaptive);
+    if ~isfield(options,'adaptiveLambda')
+      options.adaptiveLambda = 1; % if lambda not set, then set to 1 as default
+    end
+    if ~isfield(options,'realisticNumSpots')
+      options.realisticNumSpots = 92;
+    end
+    if ~isfield(options, 'globalBackground')
+      options.globalBackground = 1;
+    end
+    if ~isfield(options, 'robustObjectiveFn')
+      options.robustObjectiveFn = 1;
+    end
+    spots = adaptiveSpots(movie,options.adaptiveLambda,...
+                          options.realisticNumSpots,options.globalBackground,...
+			  options.robustObjectiveFn,...
+                          options.debug.showAdaptive);
 
   case 'wavelet'
     kitLog('Detecting particle candidates using multiscale wavelet product');

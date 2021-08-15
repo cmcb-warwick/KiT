@@ -26,7 +26,7 @@ function hs = createControls(desc)
   
   % Create figure.
   figw = 70;
-  figh = 21+desc*9;
+  figh = 25+desc*9;
   hs.fig = figure('Visible','off','Resize','off','Units','characters','Position',[100 35 figw figh]);
   hs.fig.DockControls = 'off';
   hs.fig.MenuBar = 'none';
@@ -74,9 +74,9 @@ function hs = createControls(desc)
   
   % Run buttons.
   btnw = 12; btnh = 2;
-  hs.newBtn = button(hs.fig,'New run',[x y btnw btnh],@newRunCB);
+  hs.newBtn = button(hs.fig,'New job',[x y btnw btnh],@newRunCB);
   x = x+(btnw+ddx);
-  hs.loadBtn = button(hs.fig,'Load run',[x y btnw btnh],@loadRunCB);
+  hs.loadBtn = button(hs.fig,'Load job',[x y btnw btnh],@loadRunCB);
   y = y-h; x = dx;
   btnw = 10; labw = w-(2*btnw+dx+ddx);
   hs.jobsetLab = editbox(hs.fig,'',[x y labw h]);
@@ -84,10 +84,10 @@ function hs = createControls(desc)
   x = figw-(2*btnw+dx+ddx);
   hs.editBtn = button(hs.fig,'Edit',[x y btnw btnh],@editRunCB);
   x = figw-(btnw+dx);
-  hs.runBtn = button(hs.fig,'Run',[x y btnw btnh],@executeCB);
+  hs.runBtn = button(hs.fig,'Run job',[x y btnw btnh],@executeCB);
   y = y-lh;
-  x = dx; btnw = 12;
-  hs.multirunBtn = button(hs.fig,'Multi-job run',[x y btnw btnh],@multiRunCB,10);
+  btnw = 2*btnw+ddx; x = figw-(btnw+dx);
+  hs.multirunBtn = button(hs.fig,'Run multiple jobs',[x y btnw btnh],@multiRunCB,12);
   y = y-lh;
   
   % Running tools sub-title.
@@ -106,11 +106,15 @@ function hs = createControls(desc)
   
   % Manual spot and cell filter buttons.
   btnw = 15; btnh = 2;
-  hs.spotFilterBtn = button(hs.fig,'Spot filtering',[x y btnw btnh],@filterSpotsCB);
-  x = x+btnw+ddx;
   hs.cellFilterBtn = button(hs.fig,'Cell filtering',[x y btnw btnh],@filterCellsCB);
   x = x+btnw+ddx;
+  hs.spotFilterBtn = button(hs.fig,'Spot filtering',[x y btnw btnh],@filterSpotsCB);
+  x = x+btnw+ddx;
   hs.sisterPairBtn = button(hs.fig,'Sister pairing',[x y btnw btnh],@sisterPairingCB);
+  x = x+btnw+ddx;
+  btnw = 17.5;
+  hs.spotCatBtn = button(hs.fig,'Categorise spots',[x y btnw btnh],@spotCatCB);
+  hs.spotCatBtn.Enable = 'off';
   y = y-lh;
   
   % Analysis tools sub-title.
@@ -129,12 +133,23 @@ function hs = createControls(desc)
   
   % CupL button.
   btnw = 15;
-  hs.cuplBtn = button(hs.fig,'CupL analysis',[x y btnw btnh],@cuplCB);
+  hs.quickStatsBtn = button(hs.fig,'Quick stats',[x y btnw btnh],@quickStatsCB);
+  hs.quickStatsBtn.Enable = 'off';
   x = x+(btnw+ddx);
-  hs.dublBtn = button(hs.fig,'DubL analysis',[x y btnw btnh],@dublCB);
+  hs.quickPlotsBtn = button(hs.fig,'Quick plots',[x y btnw btnh],@quickPlotsCB);
+  hs.quickPlotsBtn.Enable = 'off';
+  y = y-lh;
+  x = dx; btnw = (figw-2*dx-2*ddx)/3;
+  hs.cuplBtn = button(hs.fig,'Inter-kchore dynamics',[x y btnw btnh],@cuplCB);
+  x = x+(btnw+ddx);
+  hs.dublBtn = button(hs.fig,'Intra-kchore dynamics',[x y btnw btnh],@dublCB);
   hs.dublBtn.Enable = 'off';
+  x = x+(btnw+ddx);
+  hs.chrsBtn = button(hs.fig,'Chromatic shift',[x y btnw btnh],@chrsCB);
+  hs.chrsBtn.Enable = 'off';
   
   % Close button.
+  btnw = 15;
   x = figw-btnw-dx; y = 1;
   hs.closeBtn = button(hs.fig,'Close',[x y btnw btnh],@closeCB);
   
@@ -170,7 +185,7 @@ function newRunCB(hObj,event)
   
   % push jobset name to label
   filename = jobset.filename;
-  maxMovLen = 55;
+  maxMovLen = 48;
   filename = strshorten(filename,maxMovLen);
   hs.jobsetLab.String = filename;
   % back up all information
@@ -187,7 +202,7 @@ function loadRunCB(hObj,event)
   jobset = kitLoadJobset(fullfile(pathname,filename));
   % push jobset name to label
   filename = jobset.filename;
-  maxMovLen = 55;
+  maxMovLen = 48;
   filename = strshorten(filename,maxMovLen);
   hs.jobsetLab.String = filename;
   hs.runBtn.String = 'Run';
@@ -210,7 +225,7 @@ function editRunCB(hObj,event)
   set(guiObj,'Enable','inactive');
   
   hs.jobset = kitJobset(hs.jobset);
-  jobset = kitSetupJob(hs.jobset.options.jobProcess,hs.jobset);
+  jobset = kitSetupJob(hs.jobset);
   
   % Re-activate GUI.
   set(guiObj,'Enable','on');

@@ -4,7 +4,7 @@ function job = kitSaveJob(job)
 %    JOB = KITSAVEJOB(JOB) Saves job struct as mat-file with name based on movie
 %    filename: kittracking_jobsetFilename_movieFilename.mat
 %
-% Copyright (c) 2013 Jonathan W. Armond
+% Copyright (c) 2019 Jonathan U. Harrison and Jonathan W. Armond
 
 % Certain modes prohibit saving of output.
 if (isfield(job.options.debug,'disableSave') && job.options.debug.disableSave) || ...
@@ -21,4 +21,15 @@ if ~isfield(job,'output')
 end
 
 % Save mat.
-save(job.output, '-struct', 'job', '-v7.3');
+try
+  save(job.output, '-struct', 'job', '-v7.3');
+catch 
+  %had some errors using shared server relating to permissions
+  %instead try to save in temporary location and copy across to movie dir
+  warning('Initially uanble to save file; saving in temporary location and copying across');
+  savename = tempname(); %get a temporary location to put file instead
+  save(savename,'-struct','job','-v7.3');
+  system(sprintf('cp %s.mat %s',savename,strrep(job.output,' ', '\ ')),'-echo'); %copy across, be careful about spaces
+  system(sprintf('rm %s.mat',savename),'-echo'); %clean up afterwards
+end
+

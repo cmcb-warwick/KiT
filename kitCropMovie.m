@@ -18,7 +18,7 @@ end
 warning('off','all');
 
 try
-  [f,rgbImg,zPlanes] = kitMovieProj(movieFileName,zPlane,[],1);
+  [f,rgbImg,zPlanes] = kitMovieProj(movieFileName,zPlane,[],0);
 catch me
   errordlg(sprintf('Error opening file %s: %s',movieFileName,me.message));
   crop = []; cropSize = [];

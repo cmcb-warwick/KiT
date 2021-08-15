@@ -11,7 +11,7 @@ bFields = fieldnames(b);
 % Recursive if any field of A is a struct.
 for i=1:length(aFields)
   f = aFields{i};
-  if isstruct(a.(f)) && ismember(f,bFields);
+  if isstruct(a.(f)) && ismember(f,bFields)
     a.(f) = structCopyMissingFields(a.(f), b.(f));
   end
 end

@@ -3,6 +3,6 @@ function s=strshorten(s,l)
 
 if length(s) > l
   m = floor(l/2) - 2;
-  n = m + mod(l,2);
-  s = [s(1:m) '...' s(end-n:end)];
+  n = m - mod(l,2);
+  s = [s(1:n) '...' s(end-m:end)];
 end

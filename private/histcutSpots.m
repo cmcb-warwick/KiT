@@ -86,7 +86,7 @@ end
 nn(1,:) = sum(amp>cutoff(1));
 nn(2,:) = sum(dark>cutoff(2));
 nn(3,:) = sum(poisson>cutoff(3));
-nn = (nn - options.minSpotsPerFrame)/options.maxSpotsPerFrame;
+nn = (nn - options.minSpotsPerFrame)/(options.maxSpotsPerFrame-options.minSpotsPerFrame);
 % If number of spots does not fall within range, take the closest.
 if all(nn > 1)
   idx = find(min(nn));

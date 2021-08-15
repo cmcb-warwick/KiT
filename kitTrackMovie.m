@@ -39,7 +39,7 @@ if any(ismember(tasks,[1 2 9]))
     if iscell(job.metadata)
       job.metadata = job.metadata{job.index};
     end
-    [job.metadata, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata);
+    [job.metadata, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),'valid',job.metadata);
   else
     [job.metadata, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie));
   end

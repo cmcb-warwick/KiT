@@ -1,0 +1,18 @@
+#!/bin/bash
+#PBS -l walltime=1:00:00
+#PBS -l pmem=4gb
+#PBS -l ncpus=8
+#PBS -V
+#PBS -e localhost:$HOME/$PBS_JOBNAME.err
+#PBS -o localhost:$HOME/$PBS_JOBNAME.out
+#PBS -M jonathan.u.harrison@warwick.ac.uk
+#PBS -m be
+
+# Random delay to avoid overloading resources.
+sleep $[ ( $RANDOM % 10 )  + 1 ]s
+
+# PBS template for KiT. Edit to suit your configuration.
+
+cd $HOME/kit
+matlab -nodesktop -nosplash -singleCompThread -r "js=kitLoadJobset('../2019-01-30/kitjobset_190131_anaphase_v001.mat');js.movieDirectory='../2019-01-30/';js.options.adaptiveLambda=-20;kitRunJob(js);"
+

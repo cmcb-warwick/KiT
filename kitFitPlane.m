@@ -220,8 +220,7 @@ for t=1:nTimePoints
     else
       [eigenVectors(:,:,t), eigenValues(t,:), meanCoord(t,:)] = ...
           eigenCalc(initCoord(t).allCoord(inlierIdx,1:probDim));
-      [~,~,meanCoordFull(t,:)] = ...
-          eigenCalc(initCoord(t).allCoord(inlierIdx,1:3)); % needed only for 3D center of mass
+      meanCoordFull(t,1:probDim) = meanCoord(t,1:probDim); % needed only for 3D center of mass
     end
 
     % fill in the center of mass into the planeOrigin no matter whether
@@ -260,6 +259,12 @@ for t=1:nTimePoints
   end
 
 end %(for t=1:nTimePoints)
+
+if isfield(opts,'smoothPlaneOrigin') && opts.smoothPlaneOrigin
+%optionally smooth the origin time series
+fprintf('Smoothing the origin time series ...\n');
+planeFit = smoothOriginTimeSeries(planeFit, opts.debug.showPlaneFit);
+end
 
 %if there are enough good frames, go over potentially good frames and
 %convert them into good frames if they come after good frames
@@ -444,14 +449,12 @@ if use2D && ~useInputPlane
 end
 
 if nConsecFrames >= minConsecFrames && ~isempty(goodFrames)
-
   if ~useInputPlane
     for t = 1:length(goodFrames)
-
       % define plane vectors etc.
       goodNormals(:,t) = eigenVectors(:,eigenVecAssign(normalIndx,t),goodFrames(t));
       e_plane = calcPlaneVectors(goodNormals(:,t));
-      planeFit(goodFrames(t)).plane = [goodNormals(:,t)',meanCoordFull(goodFrames(t),:)*goodNormals(:,t)];
+      planeFit(goodFrames(t)).plane = [goodNormals(:,t)',planeFit(goodFrames(t)).planeOrigin*goodNormals(:,t)];
       planeFit(goodFrames(t)).planeVectors = e_plane;
 
       % assignment of metaphase or anaphase; distinction of late prometaphase
@@ -547,13 +550,13 @@ if nConsecFrames >= minConsecFrames && ~isempty(goodFrames)
   %if there is a frame labeled 'a', go back in time and, as long as the
   %kinetochore scatter decreases, classify preceding frames as 'a'
   if ~isempty(firstFrameA)
-
-    t = firstFrameA - 1;
-    while t > 0 && (all(dist2planeStd(t) > dist2planeStd(max(1,t-5):max(1,t-1))))
-      planeFit(t).phase = 'a';
-      t = t - 1;
+    if  ~isfield(opts,'skipAnaphaseCountback') || ~opts.skipAnaphaseCountback
+      t = firstFrameA - 1;
+      while t > 0 && (all(dist2planeStd(t) > dist2planeStd(max(1,t-5):max(1,t-1))))
+        planeFit(t).phase = 'a';
+        t = t - 1;
+      end
     end
-
     %if there are no 'a' frames but there are some empty frames toward
     %the end of the movie, label those as 'a' and again go back in time
     %looking for the start of anaphase
@@ -779,9 +782,26 @@ dataStruct.planeFit = planeFit;
 
 % Plot plane if debugging.
 if opts.debug.showPlaneFit ~= 0
+  if isfield(opts.debug,'makePlaneFitMovie') && opts.debug.makePlaneFitMovie
+    h = figure;
+    if ~verLessThan('matlab','9.5') %this property only added for matlab R2018a onwards
+      h.WindowState = 'fullscreen'; %make figure full screen 
+    end
+    outname = kitGenerateOutputFilename(job);
+    vidfile = VideoWriter(sprintf('%sPlaneFitMovie.mp4',outname),'MPEG-4');
+    open(vidfile);
+  end
   for i = 1:nTimePoints
     showPlaneFit(job,reader,channel,i,planeFit(i).planeOrigin,...
                  planeFit(i).planeVectors,initCoord(i).allCoordPix);
+    if opts.debug.makePlaneFitMovie
+      drawnow;
+      F(i) = getframe(h);
+      writeVideo(vidfile,F(i));
+    end
+  end
+  if opts.debug.makePlaneFitMovie
+    close(vidfile)
   end
 end
 
@@ -817,15 +837,16 @@ if ~isempty(eVecs)
   xAxis = [origin origin+axisLen*eVecs(:,1)];
   yAxis = [origin origin+axisLen*eVecs(:,2)];
   zAxis = [origin origin+axisLen*eVecs(:,3)];
-  plot(xAxis(1,:),xAxis(2,:),'r-');
-  plot(yAxis(1,:),yAxis(2,:),'c-');
-  plot(zAxis(1,:),zAxis(2,:),'y-');
+  plot(xAxis(1,:),xAxis(2,:),'r-','linewidth',3);
+  plot(yAxis(1,:),yAxis(2,:),'c-','linewidth',3);
+  plot(zAxis(1,:),zAxis(2,:),'y-','linewidth',3);
 end
 
 % Draw inlier spots.
 if ~isempty(allCoordPix)
   plot(allCoordPix(:,1),allCoordPix(:,2),'wx');
 end
+set(gca,'fontsize',20);
 hold off;
 pause(0.1);
 

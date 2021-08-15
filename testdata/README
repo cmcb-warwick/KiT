@@ -1,0 +1,2 @@
+The testdata/ directory is meant to store an example tiff image to demonstrate and test the performance of the tracking algorithms in KiT.
+The example tiff image shows kinetochore oscillations in metaphase and can be downloaded from the bitbucket repository or automatically by running appropriate tests.

@@ -4,6 +4,11 @@ function outputName=kitGenerateOutputFilename(job)
 [~,jobsetName] = fileparts(job.filename);
 [moviePath,movieName] = fileparts(job.ROI.movie);
 
+if ~ischar(jobsetName)
+  %attempt to convert to char
+  jobsetName = char(jobsetName);
+end
+
 if isfield(job,'jobsetVersion') && job.jobsetVersion >= 5
   % Add index near front of filename to improve filesystem sorting.
   fileName = ['kittracking' num2str(job.index,'%03d') '-' jobsetName '-' movieName];

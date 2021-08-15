@@ -10,6 +10,11 @@ dragTails = 5;
 [md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.movie),job.metadata);
 movieIdx = job.index;
 
+% get channel information
+for iCh = 1:length(job.dataStruct)
+    opts.coordChans(iCh) = ~isempty(job.dataStruct{iCh});
+end
+opts.coordChans = find(opts.coordChans);
 % get crop information, if any
 crop = job.ROI(movieIdx).crop;
 cropSize = job.ROI(movieIdx).cropSize;

@@ -48,24 +48,28 @@ fig_n=ceil(sqrt(nSisters));
 fig_m=ceil(nSisters/fig_n);
 
 % open movie
-[~,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata,0);
+[~,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),'valid',job.metadata,0);
 % read stack
 img = kitReadImageStack(reader,job.metadata,opts.timePoint,opts.channel,job.ROI.crop,0);
 
 % show each sister
+ctr = 1;
 for iSis=opts.subset
     
     opts.sisterPair = iSis;
     
-    f = subplot(fig_m,fig_n,iSis);
+    f = subplot(fig_m,fig_n,ctr);
     
     noCoords = showSisterPair(job,img,opts);
     if noCoords
-        cla(f);
+        set(f,'Visible','off');
     else
         plotTit = sprintf('Sis %i',iSis);
         title(plotTit,'FontSize',10)
     end
+    
+    ctr = ctr+1;
+    
 end
 
 end
@@ -133,8 +137,10 @@ end
 % produce cropped image around track centre
 xReg = [centrePxl(1)-ceil(1/pixelSize(1))+1 ...
            centrePxl(1)+ceil(1/pixelSize(1))+1];
+xReg = [max(xReg(1),1) min(xReg(2),size(img,2))];
 yReg = [centrePxl(2)-ceil(1/pixelSize(2))+1 ...
            centrePxl(2)+ceil(1/pixelSize(2))+1];
+yReg = [max(yReg(1),1) min(yReg(2),size(img,1))];
 imgCrpd = img(yReg(1):yReg(2),xReg(1):xReg(2));
 
 % define contrast stretch and apply
@@ -156,7 +162,7 @@ end
 hold on
 for iSis = 1:2
     plot(coords(iSis,1),coords(iSis,2),...
-        'Color','k','Marker','x','MarkerSize',15)
+        'Color','y','Marker','x','MarkerSize',15)
 end
 hold off
 

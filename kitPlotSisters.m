@@ -50,7 +50,7 @@ fig_m=ceil(n/fig_n);
 clf;
 for i=1:nSisters
     subplot(fig_m,fig_n,i);
-    pair = trackPairs(i,1:2);
+    pair = trackPairs(opts.subset(i),1:2);
     if opts.useTracks
       x1 = trackList(pair(1)).coords(:,1);
       x2 = trackList(pair(2)).coords(:,1);
@@ -59,9 +59,10 @@ for i=1:nSisters
       x2=sisterList(i).coords2(:,1);
     end
     t=((1:length(x1))-1)*dt;
-    plot(t,x1,t,x2);
+    plot(t,x1,t,x2, 'linewidth',3);
     title(sprintf('sister %d tracks %d,%d',opts.subset(i),pair(1),pair(2)));
     xlim([t(1) t(end)]);
     xlabel('t');
     ylabel('x');
+    set(gca,'fontsize',20);
 end

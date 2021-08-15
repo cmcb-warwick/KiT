@@ -6,7 +6,7 @@ function kitLabelSisters(job,varargin)
 %
 %    Options, defaults in {}:-
 %
-%    channel: 1, 2 or 3, where default is the coordinate system channel.
+%    channel: 1, 2 or 3, where default is the {coordinate system channel}.
 %       Channel in which to overlay spots.
 %
 %    contrast: {[0.1 1]} or similar. Upper and lower contrast limits.
@@ -59,7 +59,7 @@ if iscell(job)
     job = job{1};
     warning('Job provided is in cell format. Please ensure that you have provided a single job and not a full experiment.');
 end
-[md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata);
+[md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),'ROI',job.metadata,1);
 crop = job.ROI.crop;
 
 %% Process the image
@@ -91,23 +91,23 @@ imshow(img);
 % pre-define some structures
 dS = job.dataStruct{opts.channel};
 spotIDs = dS.sisterList(1).trackPairs(:,1:2);
-coords = NaN(2);
 hold on
 % get sister coordinates
 for iSis = 1:length(dS.sisterList)
+    coords = NaN(2);
     for iSpot = 1:2
         iTrack = dS.tracks(spotIDs(iSis,iSpot));
         startT = iTrack.seqOfEvents(1,1);
         endT   = iTrack.seqOfEvents(2,1);
         if ismember(opts.timePoint,startT:endT)
             idx = dS.tracks(spotIDs(iSis,iSpot)).tracksFeatIndxCG(opts.timePoint-startT+1);
-            coords(iSpot,:) = dS.initCoord(opts.timePoint).allCoordPix(idx,opts.coords);
-        else
-            coords(iSpot,:) = NaN;
+            if idx
+                coords(iSpot,:) = dS.initCoord(opts.timePoint).allCoordPix(idx,opts.coords);
+            end
         end
     end
     % plot
-    line([coords(1,1) coords(2,1)],[coords(1,2) coords(2,2)],'Color','g');
+    line([coords(1,1) coords(2,1)],[coords(1,2) coords(2,2)],'Color','w');
 end
 
 end

@@ -33,7 +33,7 @@ function compareHistograms(data,varargin)
 %             case-sensitive, i.e. 'gamma' or 'tLocationScale ' will be
 %             rejected.
 %
-%    legend: {'Expt 1','Expt 2','Expt 3','Expt 4','Expt 5'} or similar.
+%    legends: {'Expt 1','Expt 2','Expt 3','Expt 4','Expt 5'} or similar.
 %             Titles for each experiment, as will be shown in the legend,
 %             and best fit peak values.
 %    

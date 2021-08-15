@@ -279,7 +279,7 @@ end
 
 
 %clear cc to save memory
-clear cc;
+%clear cc;
 
 % %I have re-written this section to save memory --Khuloud
 % % write value vector, pad a zero
@@ -303,8 +303,6 @@ clear cc;
 rowIdx = int32([0;rowIdx]);
 %colIdx = int32([0;find(diff([0;colIdx]));length(val)]);
 val = double([0; val]);
-
-
 
 %==================================
 
@@ -334,3 +332,8 @@ val = double([0; val]);
 x = x(2:end);
 y = y(2:end);
 
+% totalcost = 0;
+% for i=1:scc(1)/2
+%    totalcost = totalcost + full(cc(x(i),i));
+% end
+% totalcost

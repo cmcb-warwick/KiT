@@ -31,11 +31,17 @@ function kitLabelSpots(job,varargin)
 opts.channel = job.options.coordSystemChannel;
 opts.contrast = [0.1 1];
 opts.coords = 'xy';
+opts.marker = 'x';
 opts.timePoint = 1;
 opts.transpose = 0;
 opts.withinFig = 0;
 % process user-defined options
 opts = processOptions(opts, varargin{:});
+
+% check marker option
+if ~ismember(opts.marker,'x+i')
+    error('Marker option not recognised: %s',opts.marker);
+end
 
 %% Pre-processing
 
@@ -59,7 +65,7 @@ if iscell(job)
     job = job{1};
     warning('Job provided is in cell format. Please ensure that you have provided a single job and not a full experiment.');
 end
-[md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata);
+[md, reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),'valid',job.metadata);
 crop = job.ROI.crop;
 
 %% Process the image
@@ -92,6 +98,27 @@ imshow(img);
 dS = job.dataStruct{opts.channel};
 coords = dS.initCoord(opts.timePoint).allCoordPix(:,opts.coords);
 hold on
-scatter(coords(:,1),coords(:,2),'gx')
+if strcmp(opts.marker,'i')
+    markerSize = ceil(job.options.intensity.maskRadius / job.metadata.pixelSize(1));
+    for i = 1:size(coords,1)
+        drawCircle(coords(i,1),coords(i,2),markerSize,'w');
+    end
+else
+    markerSize = 10;
+    scatter(coords(:,1),coords(:,2),['w' opts.marker])
+end
+hold off
+
+end
+
+function drawCircle(x,y,r,color)
+% Draws circle.
+
+% Estimate pixels in circumference.
+c = 2*pi*r;
+theta = linspace(0,2*pi,ceil(c));
+cx = x + r*cos(theta);
+cy = y + r*sin(theta);
+plot(cx, cy, [color '-']);
 
 end

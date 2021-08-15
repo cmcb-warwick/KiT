@@ -1,4 +1,7 @@
-function [spots,threshold] = adaptiveSpots(movie,lambda,verbose);
+function [spots,threshold] = adaptiveSpots(movie,lambda,...
+                                           realisticNumSpots, ... 
+                                           globalBackground, ...
+					   robustObjectiveFn, verbose)
 % ADAPTIVESPOTS Adaptive thresholding for spot detection.
 %
 % Copyright 2015 J. W. Armond
@@ -7,7 +10,19 @@ if nargin<2 || isempty(lambda)
   lambda = 0;
 end
 
-if nargin<3 || isempty(verbose)
+if nargin<3 || isempty(realisticNumSpots)
+  realisticNumSpots = 100;
+end
+
+if nargin<4 || isempty(globalBackground)
+    globalBackground = 0; %local or global background subtraction
+end
+
+if nargin<5 || isempty(robustObjectiveFn)
+  robustObjectiveFn = 1; %determines which objective function to use
+end
+
+if nargin<6 || isempty(verbose)
   verbose = 0;
 end
 
@@ -27,6 +42,9 @@ for i=1:nFrames
   else
     imgF = fastGauss3D(img,2,3);
     bkgd = fastGauss3D(img,16,63);
+  end
+  if globalBackground
+  bkgd = ones(size(imgF))*mean(bkgd(:));
   end
   amp = imgF-bkgd;
 
@@ -66,7 +84,6 @@ if verbose
   opts = psoptimset(opts,'outputfcns',@progress);
 end
 [threshold,fval] = patternsearch(@objective,0.5*(minThresh+maxThresh), [],[],[],[],minThresh,maxThresh,[], opts);
-
 % Go over all frames and apply the threshold.
 spots = cell(nFrames,1);
 for i=1:nFrames
@@ -97,20 +114,24 @@ function [stop,options,optchanged] = progress(optimvalues,options,flag)
 end
 
 function y = objective(t)
+    %objective to minimize as a function of the threshold value, t
   m = zeros(length(locs)-1,1);
   n = zeros(length(locs),1);
   for i=1:length(locs)-1
     % Find local maxima passing threshold in this frame and the next.
     s1 = findSpots(locs{i}(:,1:3),locs{i}(:,4),t);
     s2 = findSpots(locs{i+1}(:,1:3),locs{i+1}(:,4),t);
-
     % Compute metric for point cloud difference.
     m(i) = meanMinDiff(s1,s2);
     % Mean number of spots for optional penalty.
     n(i) = size(s1,1);
   end
   n(end) = size(s2,2);
-  y = mean(m) + lambda/(max(1,mean(n)));
+  if robustObjectiveFn
+    y = mean(m) + lambda*mean(abs(n-realisticNumSpots));
+  else
+    y = mean(m) + lambda/(max(1,mean(n)));    
+  end
 end
 
 function s=findSpots(locMax,amp,th)

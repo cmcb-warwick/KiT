@@ -11,8 +11,12 @@ function dublShowSisterPair(job,varargin)
 %    channels are presented in the figure, where typically:
 %    1=red, 2=green, 3=blue.
 %
-%    contrast: {[0.1 1]} or similar structure. A 1x3 cell of pairs of
-%           numbers for use in image contrast.
+%    contrast: {{[0.1 1],[0.1 1],[0.1 1]}}, 'help', or similar. Upper and
+%       lower contrast limits for each channel. Values must be in range
+%       [0 1]. 'help' outputs the minimum and maximum intensity values as 
+%       guidance, then requests values from the user.
+%       Tips: - Increase the lower limit to remove background noise.
+%             - Decrease the upper limit to increase brightness.
 %
 %    newFig: {0} or 1. Whether or not to show the sister pair in a new
 %           figure.
@@ -77,7 +81,7 @@ end
 
 % get coordinate system and plot channels
 coordSysChan = job.options.coordSystemChannel;
-plotChans = opts.plotChannels;
+plotChans = sort(opts.plotChannels);
 nChans = length(plotChans);
 
 % get sister information
@@ -216,7 +220,24 @@ if opts.zoom
     
     % define contrast stretch for shifted cropped, and apply
     for c = plotChans
-        irange = stretchlim(rgbCrpdCS(:,:,mapChans(c)),opts.contrast{c});
+        if iscell(opts.contrast)
+            irange = stretchlim(rgbCrpdCS(:,:,mapChans(c)),opts.contrast{c});
+        elseif strcmp(opts.contrast,'help')
+            % get maximum and minimum intensities of image
+            intensityRange(1) = min(min(rgbCrpdCS(:,:,mapChans(c))));
+            intensityRange(2) = max(max(rgbCrpdCS(:,:,mapChans(c))));
+            % output possible range 
+            fprintf('Channel %i. Range in third coordinate: [%i %i].\n',c,intensityRange(1),intensityRange(2));
+            % request input from user
+            userRange = input('Please provide range of intensities to image: ');
+            while userRange(1)>userRange(2) 
+                userRange = input('The maximum cannot be smaller than the minimum. Please try again: ');
+            end
+            irange = [userRange(1) userRange(2)];
+            fprintf('\n');
+        else
+            irange = opts.contrast(c,:);
+        end
         rgbCrpdCS(:,:,mapChans(c)) = imadjust(rgbCrpdCS(:,:,mapChans(c)), irange, []);
     end
     
@@ -250,7 +271,24 @@ else
     
     % define contrast stretch for cropped images, and apply
     for c = plotChans
-        irange = stretchlim(rgbImgCS(:,:,mapChans(c)),opts.contrast{c});
+        if iscell(opts.contrast)
+            irange = stretchlim(rgbImgCS(:,:,mapChans(c)),opts.contrast{c});
+        elseif strcmp(opts.contrast,'help')
+            % get maximum and minimum intensities of image
+            intensityRange(1) = min(rgbImgCS(:,:,mapChans(c)));
+            intensityRange(2) = max(rgbImgCS(:,:,mapChans(c)));
+            % output possible range 
+            fprintf('Channel %i. Range in third coordinate: [%i %i].\n',c,intensityRange(1),intensityRange(2));
+            % request input from user
+            userRange = input('Please provide range of intensities to image: ');
+            while userRange(1)>userRange(2) 
+                userRange = input('The maximum cannot be smaller than the minimum. Please try again: ');
+            end
+            irange = [userRange(1) userRange(2)];
+            fprintf('\n');
+        else
+            irange = opts.contrast(c,:);
+        end
         rgbImgCS(:,:,mapChans(c)) = imadjust(rgbImgCS(:,:,mapChans(c)), irange, []);
     end
     
@@ -258,9 +296,9 @@ end
 
 
 %% Find coordinates to plot for each RGB image
-    
-% transform track coordinates to centre of cropped region
-coord = trackCoord(plotChans,:,:);
+
+% THIS LINE NOT REALLY NECESSARY
+coord = trackCoord;
 
 % adjust to pixels
 for i = 1:2

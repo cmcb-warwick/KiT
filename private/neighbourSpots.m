@@ -3,8 +3,8 @@ function [spots,spotIDs] = neighbourSpots(movie,refDataStruct,channel,metadata,o
 % mixture model fitting
 %
 % Created by: J. W. Armond
-% Modified by: C. A. Smith, J. U. Harrison
-% Copyright (c) 2020 J. U. Harrison
+% Modified by: C. A. Smith
+% Copyright (c) 2017 C. A. Smith
 
 %% Input + initialization
 

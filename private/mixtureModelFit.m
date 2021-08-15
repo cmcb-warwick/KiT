@@ -1,4 +1,4 @@
-function [spots,spotID,amps,bgAmps,rejects]=mixtureModelFit(cands,image,psfSigma,options)
+function [spots,spotID,amps,bgAmps,rejects]=mixtureModelFit(cands,image,psfSigma,options,updProg)
 % MIXTUREMODELFIT Fit Gaussian mixture models to spots
 %
 % Enhances candidate spots obtained by centroid fitting by fitting Gaussian
@@ -12,8 +12,13 @@ function [spots,spotID,amps,bgAmps,rejects]=mixtureModelFit(cands,image,psfSigma
 verbose = options.debug.mmfVerbose;
 mmf = options.mmf;
 
+if nargin < 5 || isempty(updProg)
+  updProg=0;
+end
+
 % Set optimization options.
-optoptions = optimset('Jacobian','on','Display','off','Tolfun',mmf.mmfTol,'TolX',1e-6);
+optoptions = optimset('Jacobian','on','Display',...
+  'off','Tolfun',mmf.mmfTol,'TolX',1e-6,'UseParallel',true);
 alphaA = mmf.alphaA; % amplitude t-test cutoff.
 alphaF = mmf.alphaF; % N vs N+1 F-test cutoff.
 alphaD = mmf.alphaD;
@@ -51,9 +56,14 @@ warning('off','MATLAB:singularMatrix');
 
 startTime = clock;
 
+  if updProg
+    prog = kitProgress(0);
+  end
+
   % For each cluster, perform iterative mixture-model fitting, increasing
   % number of Gaussians and F-testing.
   for i=1:nClusters
+    
     % Extract cluster data.
     idx = clusters==i;
     clusterCandsT = cands(idx,1:cols); % Candidates in this cluster.
@@ -66,6 +76,9 @@ startTime = clock;
     end
     clusterAmpT = image(clusterCands1D);
     numCandsT = size(clusterCandsT,1);
+if numCandsT>10
+warning('Trying to fit a large cluster of %d candidates',numCandsT);
+end
     if verbose
       kitLog('Fitting cluster %d, %d cands',i,numCandsT);
     end
@@ -154,6 +167,12 @@ startTime = clock;
     spotID = [spotID; candID];
     amps = [amps; clusterAmp];
     bgAmps = [bgAmps; repmat(bgAmp,[numCands,1])];
+    
+    % Update progress if necessary.
+    if updProg
+        prog = kitProgress(0.5*i/nClusters,prog);
+    end
+    
   end
 
 % Recluster to incorporate new candidates that are nearby into same
@@ -173,6 +192,7 @@ candID2 = [];
 amps2 = [];
 bgAmps2 = [];
 
+amp_pvals_store = [];
 % Distance testing. 1-sided t-test.
 for i=1:nClusters
   % Extract candidate information for new cluster.
@@ -279,12 +299,16 @@ for i=1:nClusters
   % Amplitude testing. 1-sided t-test.
   % Repeat while some amplitudes not signifcant.
   while numCands > 0
+% clusterAmp
+% clusterAmpVar
+% residVar
     testStat = clusterAmp./sqrt(clusterAmpVar+residVar);
     pValue = 1-tcdf(testStat,numDegFree); %%% HAD A TRY FUNCTION HERE, WITH p=1 IF FAILED, SO MIGHT ENCOUNTER THIS LATER
     [pValueMax,indxBad] = max(pValue);
     testAmp = pValueMax > alphaA;
     if ~testAmp
       if verbose
+        amp_pvals_store = [amp_pvals_store; pValue];
         kitLog('All candidates passed amplitude test. Range of p=[%g,%g]',min(pValue),pValueMax);
       end
       break;
@@ -334,6 +358,11 @@ for i=1:nClusters
 
   if verbose
     kitLog('Cluster fitting complete, %d spots',numCands);
+    figure(1);
+%    plot(amp_pvals_store,'rx');
+%    hold on;
+    [fpvals,xi] = ksdensity(amp_pvals_store); 
+    plot(xi,fpvals,'k','LineWidth',3);
   end
 
   % Add amplitude p-value
@@ -350,6 +379,12 @@ for i=1:nClusters
   candID2 = [candID2; candID];
   amps2 = [amps2; [clusterAmp clusterAmpVar pValue]];
   bgAmps2 = [bgAmps2; repmat([bgAmp bgAmpVar],[numCands,1])];
+  
+  % Update progress if necessary.
+  if updProg
+      prog = kitProgress(0.5*(1+i/nClusters),prog);
+  end
+    
 end
 
 spots = spots2;

@@ -50,7 +50,8 @@ while ~handles.stop
 
     % check whether there is any data contained within this movie
     if ~isfield(job{iMov},'dataStruct') || length(job{iMov}.dataStruct)<iChan || ...
-            ~isfield(job{iMov}.dataStruct{iChan},'failed') || job{iMov}.dataStruct{iChan}.failed
+            ~isfield(job{iMov}.dataStruct{iChan},'failed') || job{iMov}.dataStruct{iChan}.failed || ...
+            ~isfield(job{iMov}.dataStruct{iChan},'sisterList')
         handles.movID = handles.movID+1;
         if handles.movID > handles.nMovs
           handles.stop = 1;

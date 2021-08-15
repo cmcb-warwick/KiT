@@ -1,7 +1,7 @@
-function kitMakeSpotMovie(job, varargin)
-% KITMAKESPOTMOVIE Renders a movie with marked spots
+function kitMakeMovie(job, varargin)
+% KITMAKEMOVIE Renders a movie with marked spots
 %
-%    KITMAKESPOTMOVIE(JOB,...) Renders the movie associated with JOB with
+%    KITMAKEMOVIE(JOB,...) Renders the movie associated with JOB with
 %    various annotations. Supply options as string/value pairs following JOB.
 %
 %    Options, defaults in {}:-
@@ -115,7 +115,7 @@ pdfOut = strcmp(upper(opts.codec),'PDF');
 colors = presetColors();
 
 % Open movie.
-[md,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),job.metadata);
+[md,reader] = kitOpenMovie(fullfile(job.movieDirectory,job.ROI.movie),'valid',job.metadata);
 
 h = figure;
 clf;
@@ -137,8 +137,12 @@ initCoord = job.dataStruct{plotChans}.initCoord;
 tracks = job.dataStruct{plotChans}.tracks;
 sisterList = job.dataStruct{plotChans}.sisterList;
 trackList = job.dataStruct{plotChans}.trackList;
-if isfield(job.dataStruct{plotChans},'trackInt')
-  trackInt = job.dataStruct{plotChans}.trackInt;
+if isfield(job.dataStruct{plotChans},'spotInt')
+  spotInt = job.dataStruct{plotChans}.spotInt;
+else
+    opts.intensityGraph = 0;
+    opts.drawMask = 0;
+    opts.plotMaxCoord = 0;
 end
 nTracks = length(trackList);
 if opts.fliplr
@@ -201,10 +205,9 @@ end
 mapChans = opts.channelMap;
 %markers = 'xo+*sd';
 maxMergeChannels = 3;
+dims = [2 1];
 if opts.transpose
-  dims = [2 1];
-else
-  dims = [1 2];
+  dims = fliplr(dims);
 end
 
 if size(opts.saturate,1)<md.nChannels
@@ -233,14 +236,14 @@ for i=1:md.nFrames
   end
 
   sz = size(rgbImg);
-  imgCentre = sz([2 1])/2;
+  imgCentre = sz(dims)/2;
   % Transform image.
   planeFit = job.dataStruct{coordSysChan}.planeFit(i);
   origin = planeFit.planeOrigin(1:2)./job.metadata.pixelSize(1:2);
   if opts.rotate && ~isempty(planeFit.planeVectors)
     if isfield(planeFit, 'tform')
       rgbImg = imtransform(rgbImg, planeFit.tform,...
-                           'XData',[1 sz(2)],'YData',[1 sz(1)],'Size',[sz(1) sz(2)]);
+                           'XData',[1 sz(1)],'YData',[1 sz(2)],'Size',[sz(1) sz(2)]);
     else
       % Translate to image coordinates (0,0).
       transMat = eye(3);
@@ -373,18 +376,18 @@ for i=1:md.nFrames
   if opts.drawMask
     for c=plotChans
       % Represent pixel mask.
-      rotMat = eye(3);
-      rotMat(1:2,1:2) = planeFit.planeVectors(1:2,1:2);
-      for j=1:length(trackInt)
+%       rotMat = eye(3);
+%       rotMat(1:2,1:2) = planeFit.planeVectors([1 2],[1 2]);
+      for j=1:size(spotInt(i).intensity,1)
         % Transform mask coords.
-        maskCoord = trackInt(j).maskCoord(i,1:2);
+        maskCoord = spotInt(i).maskCoord(j,[2 1]);
         if isnan(maskCoord(1))
           continue;
         end
-        maskCoord = [(maskCoord - origin) 1]*rotMat;
-        maskCoord = imgCentre + maskCoord(1:2);
+%         maskCoord = [(maskCoord - origin) 1]*rotMat;
+%         maskCoord = imgCentre + maskCoord([1 2]);
 
-        if strcmp(job.options.maskShape,'semicircle')
+        if strcmp(job.options.intensity.maskShape,'semicirc')
           drawSemicircle(maskCoord(1),maskCoord(2),markerSize,trackList(j).attach,'w');
         else
           drawCircle(maskCoord(1),maskCoord(2),markerSize,'w');
@@ -420,9 +423,9 @@ for i=1:md.nFrames
     c = opts.plotMaxCoord;
     rotMat = eye(3);
     rotMat(1:2,1:2) = planeFit.planeVectors(1:2,1:2);
-    for j=1:length(trackInt)
+    for j=1:size(spotInt(i).intensity,1)
       % Transform max coords.
-      maxCoord = trackInt(j).maxCoord(i,3*(c-1)+1:3*c-1);
+      maxCoord = spotInt(i).maxCoord(j,3*(c-1)+1:3*c-1);
       if isnan(maxCoord(1))
         continue;
       end
@@ -457,7 +460,9 @@ for i=1:md.nFrames
     yl = ylim();
     graphSz = insetSz*[xl(2)-xl(1), yl(2)-yl(1)];
     graphOff = insetOff.*graphSz + [xl(1),yl(1)];
-    [gx,gy] = transformPoints(job.metadata.frameTime,trackInt(j).intensity(:,c),...
+    ints = cat(1,spotInt.intensity);
+    ints = ints(j,c);
+    [gx,gy] = transformPoints(job.metadata.frameTime,ints,...
                               graphSz,graphOff);
     plot(gx(1:i),yl(2)-yl(1)+gy(1:i),'w-');
   end
@@ -481,9 +486,10 @@ for i=1:md.nFrames
       if opts.plotMaxCoord > 0
         c = opts.plotMaxCoord;
         % Add angle/dist to max.
-        zTrack = trackInt(opts.zoomTrack);
+        angmax = spotInt(i).angleToMax(opts.zoomTrack,c);
+        dismax = spotInt(i).distToMax(opts.zoomTrack,c);
         tstamp = [tstamp sprintf(' MAX % +4.0f,% 3.0f',...
-                                 zTrack.angleToMax(i,c)*180/pi,zTrack.distToMax(i,c)*1000)];
+                                 angmax*180/pi,dismax*1000)];
       end
     end
     text(1,6,tstamp,'units','pixels','color',[1 1 1]);
@@ -505,7 +511,7 @@ for i=1:md.nFrames
     % Save frame to PDF.
     set(gcf,'Color','w');
     pdfname = sprintf('%s%04d.pdf',opts.outfile,i);
-    if exist('export_fig')
+    if exist('export_fig','var')
       export_fig(pdfname);
     else
       saveas(gcf,pdfname);

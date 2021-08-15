@@ -14,6 +14,9 @@ function kitPlotSisterSignal(job,sigchannel,varargin)
 %
 %    directionality: {0}. Set to 1 to plot AP/P sections.
 %
+% NB: THIS CURRENTLY PLOTS WRONG THING. PLOTS ASSUMING TRACKS RATHER THAN
+% SPOTS.
+%
 % Copyright(c) Jonathan W. Armond 2015
 
 if nargin<2
