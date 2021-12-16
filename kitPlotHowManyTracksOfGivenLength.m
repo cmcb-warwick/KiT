@@ -34,8 +34,8 @@ TrackedSpotsInTracksOfLength(barcodeData,nFrames,0);
 nSisters = length(job.dataStruct{channel}.sisterList);
 sisterBarcodeData = zeros(nSisters,1);
 for i =1:nSisters
-   sisterBarcodeData(i) = sum(~(isnan(job.dataStruct{1}.sisterList(i).coords1(:,1)) & ...
-        isnan(job.dataStruct{1}.sisterList(i).coords2(:,1))))/nFrames;
+   sisterBarcodeData(i) = sum(~(isnan(job.dataStruct{channel}.sisterList(i).coords1(:,1)) & ...
+        isnan(job.dataStruct{channel}.sisterList(i).coords2(:,1))))/nFrames;
     %allow either sister 1 or sister 2 to have valid data
 end
 

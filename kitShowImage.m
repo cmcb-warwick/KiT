@@ -23,6 +23,9 @@ function kitShowImage(job,varargin)
 %       by ROI.crop. -1 shows a full image with the cropped region
 %       annotated.
 %
+%    invert: {0} or 1. Invert the colourmap to plot with a white background rather than
+%       with a black background (default).
+%
 %    jobsetMovie: {[]} or positive integer. The number movie to use when
 %       providing a jobset rather than job structure.
 %
@@ -64,6 +67,7 @@ opts.chanOrder = 'grb';
 opts.contrast = repmat({[0.1 1]},1,3);
 opts.coords = 'xy';
 opts.crop = 1; % use -1 to show crop on a full image
+opts.invert = 0;
 opts.jobsetMovie = [];
 opts.imageChans = [1 2];
 opts.projectionRange = [];
@@ -244,6 +248,12 @@ for iChan = opts.imageChans(opts.imageChans~=coordSysChan)
         chrsComputeCorrectedImage(rgbImg(:,:,chanOrder(coordSysChan)), rgbImg(:,:,chanOrder(iChan)),...
         chrShift{coordSysChan,iChan},'coords',opts.coords,'pixelSize',pixelSize,...
         'transpose',opts.transpose,'subpixelate',opts.subpixelate);
+end
+
+%invert image if required 
+if opts.invert
+    rgbImg = imcomplement(rgbImg);
+    rgbImgShift = imcomplement(rgbImgShift);
 end
 
 %% Plotting the image

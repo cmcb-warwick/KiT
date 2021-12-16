@@ -4,8 +4,9 @@ function kitShowDragonTails(job,varargin)
 % KITSHOWDRAGONTAILS(job, ...) Plots tracked kinetochores on top of a movie still
 % 
 % Options, defaults in {}:-
+%    channel: {1}, 2 or 3. Which channel to use for tracks.
 % 
-%    channel: {1}, 2 or 3. Which channel to show.
+%    channelPlot: {1}, 2 or 3. Which channel to show images from.
 %
 %    contrast: {[0.1 1]} or similar two-element vector. Range over which to
 %           contrast images. Tips:
@@ -15,6 +16,12 @@ function kitShowDragonTails(job,varargin)
 %    crop: {1}, 0 or -1. Whether or not to show cropped images, as defined
 %       by ROI.crop. -1 shows a full image with the cropped region
 %       annotated. Passed to kitShowImage. 
+%
+%    invert: {0} or 1. Invert the colourmap to plot with a white background rather than 
+%       with a black background (default). 
+%
+%    subpixelate: {9} or positive integer. The number by which to divide
+%       pixels in order to allow accurate chromatic shift of images.
 %    
 %    tailLength: {10} or number. Length of tracks to plot prior to and after selected frame.
 %
@@ -27,6 +34,9 @@ function kitShowDragonTails(job,varargin)
 %           or for all tracked kinetochores. Pairs will be indexed by Sister ID 
 %            rather than track ID.
 %
+%    withinFig: {0}, 1. Whether or not to show images within the current
+%       figure environment.
+%
 % Example usage: kitShowDragonTails(job,'crop',-1,'tracks',[58,93,133,143,168,197],'tailLength',99,'timePoint',1)
 %
 % Copyright (c) 2020 Jonathan U Harrison
@@ -34,13 +44,17 @@ function kitShowDragonTails(job,varargin)
 
 % default options
 opts.channel = 1;
+opts.channelPlot = 1;
 opts.contrast = {[0.1 1],[0.1 1],[0.1 1]};
 opts.crop = 1;
+opts.invert = 0;
 opts.plotColors = {'c','m'};
+opts.subpixelate = 9;
 opts.tailLength = 10; %timepoints
 opts.timePoint = 1; %centre of dragon tail
 opts.tracks = [];
 opts.usePairs = 0;
+opts.withinFig = 0;
 % process user-defined options
 opts = processOptions(opts,varargin{:});
 
@@ -69,8 +83,14 @@ end
 t = max(opts.timePoint-opts.tailLength,1): ...
     min(opts.timePoint+opts.tailLength,movieLength);
 
+% subpixelate value for chromatic shift correction with multiple channels
+if length(opts.channelPlot)==1
+    opts.subpixelate = 1;
+end
+
 % show the image
-kitShowImage(job,'imageChans',opts.channel,'timePoint',opts.timePoint,'contrast',opts.contrast,'crop',opts.crop)
+kitShowImage(job,'imageChans',opts.channelPlot,'timePoint',opts.timePoint,'contrast',opts.contrast,'crop',...
+   opts.crop,'withinFig',opts.withinFig,'invert',opts.invert)
 hold on
 if opts.usePairs
     for iPair = opts.tracks
@@ -114,7 +134,7 @@ end
         % get pixel coordinate information
         for iTime = 1:length(t)
             if ~isnan(featIdxs(iTime)) && featIdxs(iTime)>0
-                trackCoords(iTime,:) = initCoord(t(iTime)).allCoordPix(featIdxs(iTime),1:3);
+                trackCoords(iTime,:) = initCoord(t(iTime)).allCoordPix(featIdxs(iTime),1:3)*opts.subpixelate;
             end
         end
         
