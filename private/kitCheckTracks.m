@@ -7,6 +7,10 @@ function maxSpots = kitCheckTracks(job,saveOutput)
 %
 %Jonathan U Harrison 2019-02-21
 %%%%%%%%%%%%%%%%%
+if nargin < 2
+    saveOutput = 1;
+end
+
 if isfield(job,'dataStruct') && isfield(job.dataStruct{1},'tracks')
     %compute how many tracks in a given frame
     nTracks = size(job.dataStruct{1}.tracks,1);

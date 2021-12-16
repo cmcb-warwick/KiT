@@ -22,6 +22,7 @@ ndims = 2 + job.metadata.is3D;
 pixelSize = job.metadata.pixelSize;
 chrShift = job.options.chrShift.result{job.options.coordSystemChannel,...
     channel};
+nSpots = size(coords,1);
 
 if isempty(job.dataStruct{channel}.planeFit(frameNum).planeVectors)
     error('Plane fit needed to convert coordinate systems but failed for this job');
@@ -32,8 +33,8 @@ unrot = (job.dataStruct{channel}.planeFit(frameNum).planeVectors*...
    coords(:,1:3)')';
 %apply chromatic shift and stretch by pixel size
 scaled = (unrot + repmat(chrShift(1:ndims), ...
- job.dataStruct{channel}.initCoord(frameNum).nSpots,1)) .* ...
- repmat(1./pixelSize,job.dataStruct{channel}.initCoord(frameNum).nSpots,1);
+ nSpots, 1)) .* ... %job.dataStruct{channel}.initCoord(frameNum).nSpots,1)) .* ...
+ repmat(1./pixelSize, nSpots,1); %job.dataStruct{channel}.initCoord(frameNum).nSpots,1);
 %shift by centre of mass
 centerOfMass = mean(job.dataStruct{channel}.initCoord(frameNum).allCoordPix);
 imageCoords = scaled + repmat(centerOfMass(1:3),size(scaled,1),1);
