@@ -1,6 +1,8 @@
 KiT (Kinetochore Tracking) software
 ===================================
 
+[![DOI](https://zenodo.org/badge/111115260.svg)](https://zenodo.org/badge/latestdoi/111115260)
+
 KiT is a MATLAB program for tracking kinetochores in microscopy movies in 2D or
 3D, and in multiple channels.
 
